@@ -4,7 +4,8 @@ import (
     "flag"
     "fmt"
     "os"
-    "text/template"
+//    "strings"
+//    "text/template"
 )
 
 type Configuration struct {
@@ -16,6 +17,7 @@ type Configuration struct {
     AppName     string
     SSLCertCER  string
     SSLCertKEY  string
+    AppRoot     string
 }
 
 func main() {
@@ -28,6 +30,7 @@ func main() {
     appName := flag.String("App_Name", "", "Application Name")
     sslCertCER := flag.String("SSL_Cert_CER", "", "SSL Certificate CER")
     sslCertKEY := flag.String("SSL_Cert_KEY", "", "SSL Certificate KEY")
+    appRoot := flag.String("App_Root", "", "Application Root (for WebSite)")
 
     // Parse command line flags
     flag.Parse()
@@ -48,6 +51,7 @@ func main() {
         AppName:     *appName,
         SSLCertCER:  *sslCertCER,
         SSLCertKEY:  *sslCertKEY,
+        AppRoot:     *appRoot,
     }
 
     // Generate NGINX configuration
@@ -56,14 +60,36 @@ func main() {
     fmt.Println(nginxConfig)
 }
 
+func generateNginxConfig(config Configuration) string {
+    var tpl string
 
-func nginx_templ_1(dnsNode, appPort, appName, sslCertCER, sslCertKEY string) string {
+    switch config.Type {
+    case "API":
+        if config.Environment == "Test" {
+            tpl = nginxConfig1(config.DNSNode, config.AppPort, config.AppName, config.SSLCertCER, config.SSLCertKEY)
+        } else if config.Environment == "Prod" {
+            tpl = nginxConfig1(config.DNSNode, config.AppPort, config.AppName, config.SSLCertCER, config.SSLCertKEY) + "\n" +
+                nginxConfig1(config.DNSNLB, config.AppPort, config.AppName, config.SSLCertCER, config.SSLCertKEY)
+        }
+    case "Worker":
+        tpl = nginxConfig1(config.DNSNode, config.AppPort, config.AppName, config.SSLCertCER, config.SSLCertKEY)
+    case "WebSite":
+        tpl = nginxConfig2(config.DNSNode, config.AppRoot, config.AppName, config.SSLCertCER, config.SSLCertKEY)
+        if config.Environment == "Prod" {
+            tpl += "\n" + nginxConfig2(config.DNSNode, config.AppRoot, config.AppName, config.SSLCertCER, config.SSLCertKEY)
+        }
+    }
+
+    return tpl
+}
+
+func nginxConfig1(dnsNode string, appPort int, appName, sslCertCER, sslCertKEY string) string {
     return fmt.Sprintf(`
 server {
     listen 443 ssl;
     server_name %s;
     location / {
-        proxy_pass http://localhost:%s;
+        proxy_pass http://localhost:%d;
         proxy_redirect off;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -77,7 +103,7 @@ server {
 `, dnsNode, appPort, appName, appName, sslCertCER, sslCertKEY)
 }
 
-func nginx_templ_2(dnsNode, appRoot, appName, sslCertCER, sslCertKEY string) string {
+func nginxConfig2(dnsNode, appRoot, appName, sslCertCER, sslCertKEY string) string {
     return fmt.Sprintf(`
 server {
     listen 80;
@@ -105,7 +131,4 @@ server {
 }
 `, dnsNode, appRoot, dnsNode, dnsNode, appRoot, appName, appName, sslCertCER, sslCertKEY)
 }
-
-
-serverBlock := nginx_templ_1("example.com", "8080", "myapp", "example.cer", "example.key")
 
