@@ -1,5 +1,5 @@
 .SILENT :
-.PHONY: run-test-manual build-all
+.PHONY: run-test build-all tidy-do
 
 build-win:
 		GOOS=windows GOARCH=amd64 go build -o ./build/windows/ConfigGen.exe main.go
@@ -15,5 +15,7 @@ remove-lin:
 remove-all:
 		rm -rf ./build/windows/ConfigGen.exe
 		rm -rf ./build/linux/ConfigGen
-run-test-manual:
+run-test:
 	go test -v
+tidy-do:
+		go mod tidy

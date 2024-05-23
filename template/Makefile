@@ -1,4 +1,5 @@
 .SILENT :
+.PHONY: run-test build-all tidy-do
 
 build-win:
 		GOOS=windows GOARCH=amd64 go build -o ./build/windows/packageName.exe main.go
@@ -14,3 +15,7 @@ remove-lin:
 remove-all:
 		rm -rf ./build/windows/*
 		rm -rf ./build/linux/*
+run-test:
+	go test -v
+tidy-do:
+		go mod tidy
