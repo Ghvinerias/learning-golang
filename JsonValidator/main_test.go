@@ -8,7 +8,6 @@ import (
     "testing"
 )
 
-// Sample JSON data for testing
 var validJSON = []byte(`
 {
     "name": "John Doe",
