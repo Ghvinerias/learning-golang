@@ -1,0 +1,522 @@
+[
+    {
+        "Host_header": "AML.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "BulkImporter.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CBO.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CBOIntegration.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CoreBanking.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CoreBankingReports.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "EnforcementBureau.NLB.WebService.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "EnforcementBureau.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "IVRAbonentCategory.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBank.NLB.WebService.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBCards.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBNotification.NLB.WebService.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBNotification.NLB.WebService.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBTerminals.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "Minio.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "NaprCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SalesCRM.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SalesCRMAgreements.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SdaCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SdaCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SmsAdmin.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackages.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackagesExternal.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackagesPublic.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "UtilityBills.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "UtilityBillsAdmin.NLB.API.lb.ge",
+        "Server": "IISAppA-01.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "AML.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "BulkImporter.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CBO.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CBOIntegration.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CoreBanking.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CoreBankingReports.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "EnforcementBureau.NLB.WebService.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "EnforcementBureau.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "IVRAbonentCategory.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBank.NLB.WebService.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBCards.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBNotification.NLB.WebService.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBNotification.NLB.WebService.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBTerminals.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "Minio.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "NaprCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SalesCRM.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SalesCRMAgreements.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SdaCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SdaCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SmsAdmin.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackages.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackagesExternal.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackagesPublic.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "UtilityBills.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "UtilityBillsAdmin.NLB.API.lb.ge",
+        "Server": "IISAppA-02.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "AML.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "BulkImporter.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CBO.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CBOIntegration.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CoreBanking.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CoreBankingReports.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "EnforcementBureau.NLB.WebService.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "EnforcementBureau.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "IVRAbonentCategory.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBank.NLB.WebService.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBCards.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBNotification.NLB.WebService.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBNotification.NLB.WebService.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBTerminals.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "Minio.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "NaprCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SalesCRM.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SalesCRMAgreements.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SdaCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SdaCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SmsAdmin.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackages.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackagesExternal.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackagesPublic.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "UtilityBills.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "UtilityBillsAdmin.NLB.API.lb.ge",
+        "Server": "IISAppA-03.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "AML.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "BulkImporter.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CBO.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CBOIntegration.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CoreBanking.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "CoreBankingReports.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "EnforcementBureau.NLB.WebService.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "EnforcementBureau.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "IVRAbonentCategory.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBank.NLB.WebService.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBCards.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBNotification.NLB.WebService.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBNotification.NLB.WebService.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "LBTerminals.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "Minio.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "NaprCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SalesCRM.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SalesCRMAgreements.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SdaCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SdaCheck.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "SmsAdmin.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackages.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackagesExternal.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "TariffPackagesPublic.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "UtilityBills.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    },
+    {
+        "Host_header": "UtilityBillsAdmin.NLB.API.lb.ge",
+        "Server": "IISAppA-04.lb.ge",
+        "Endpoint": "/swagger/index.html"
+    }
+]

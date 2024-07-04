@@ -1,1 +1,3 @@
 ./JsonValidator/jsons/*/*
+JsonValidator/jsons/*
+url-extractor/json-change/*
