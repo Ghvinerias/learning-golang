@@ -17,7 +17,7 @@ func main() {
 	url := os.Args[1]
 
 	// Set up ConvertAPI configuration
-	config.Default = config.NewDefault(os.Getenv("CONVERTAPI_SECRET")) // Get your secret at https://www.convertapi.com/a
+	config.Default = config.NewDefault(os.Getenv("CONVERTAPI_TOKEN")) // Get your secret at https://www.convertapi.com/a
 
 	fmt.Println("Converting remote PPTX to PDF from URL:", url)
 	
@@ -28,7 +28,7 @@ func main() {
 	)
 
 	// Save the result to the specified directory
-	if files, errs := pptxRes.ToPath("/workspaces/learning-golang/temp"); errs == nil {
+	if files, errs := pptxRes.ToPath("./temp.pdf"); errs == nil {
 		fmt.Println("PDF file saved to:", files[0].Name())
 	} else {
 		fmt.Println("Error:", errs)
