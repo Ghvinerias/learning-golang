@@ -37,6 +37,18 @@ type ZabbixResponse struct {
 	ID      int         `json:"id"`
 }
 
+type ApplicationParameters struct {
+	ItemName          string
+	ItemKey           string
+	ItemURL           string
+	TriggerExpression string
+}
+type PreprocessingVariants struct {
+	Regexv1     interface{}
+	Regexv2     interface{}
+	JsonParsing interface{}
+}
+
 func main() {
 	hostname := "Web Monitoring"
 
@@ -60,6 +72,59 @@ func main() {
 	// 	log.Fatalf("Failed to create trigger: %v", err)
 	// }
 	// fmt.Printf("Trigger created with ID: %s\n", triggerID)
+}
+
+func init() {
+	ItemProcessing := PreprocessingVariants{
+		Regexv1: []map[string]interface{}{
+			{
+				"type":                 "5",
+				"params":               `HTTP\/1.1 ([0-9]+)\n\\1`,
+				"error_handler":        0,
+				"error_handler_params": nil,
+			},
+		},
+		Regexv2: []map[string]interface{}{
+			{
+				"type":                 "5",
+				"params":               `HTTP\/2 ([0-9]+)\n\\1`,
+				"error_handler":        0,
+				"error_handler_params": nil,
+			},
+		},
+		JsonParsing: []map[string]interface{}{
+			{
+				"sortorder": 0,
+				"type":      21, // JavaScript preprocessing
+				"params": `
+var response;
+try {
+	response = JSON.parse(value);
+} catch (e) {
+	return "Service Unavailable";
+}
+var entries = response.Entries;
+var unhealthyEntries = [];
+
+for (var entryName in entries) {
+	if (entries.hasOwnProperty(entryName)) {
+		if (entries[entryName].Status == "Unhealthy") {
+			unhealthyEntries.push(entryName);
+		}
+	}
+}
+
+if (unhealthyEntries.length > 0) {
+	return "Unhealthy entries: " + unhealthyEntries.join(", ");
+}
+return "Healthy";
+				`,
+				"error_handler":        0,
+				"error_handler_params": nil,
+			},
+		},
+	}
+
 }
 
 func getHostID(hostname string) (string, error) {
