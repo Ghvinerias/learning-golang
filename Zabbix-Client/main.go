@@ -10,7 +10,7 @@ func main() {
 	appInput := ApplicationParameters{
 		itemName:          "Example.API",
 		itemServer:        "IISAppC-01",
-		itemCheckType:     "Swagger",
+		itemCheckType:     "HealthCheck",
 		preProcessingType: "Regexv1",
 	}
 
@@ -28,12 +28,14 @@ func main() {
 	// fmt.Printf("Host ID for '%s' is: %s\n", hostname, hostID)
 
 	if result.itemPreProcessing == "Regexv1" {
-		// Perform type assertion for Regexv1
 		preProcessing = itemProcessing.Regexv1.([]map[string]interface{})
+		valueType = "3"
 	} else if result.itemPreProcessing == "Regexv2" {
 		preProcessing = itemProcessing.Regexv2.([]map[string]interface{})
+		valueType = "3"
 	} else if result.itemPreProcessing == "JsonParsing" {
 		preProcessing = itemProcessing.JsonParsing.([]map[string]interface{})
+		valueType = "5"
 	}
 
 	// // Pass the asserted value to the function
@@ -44,17 +46,17 @@ func main() {
 	// fmt.Printf("item '%s\n' trigger %s\n", item, trigger)
 	// Pass the asserted value to the function
 
-	_, _, err = createItemAndTrigger(apiKey, hostID, result.itemName, result.itemKey, result.itemURL, result.triggerURL, result.triggerExpression, preProcessing, "2")
+	_, _, err = createItemAndTrigger(apiKey, hostID, result.itemName, result.itemKey, result.itemURL, result.triggerURL, result.triggerExpression, preProcessing, "2m", valueType)
 	if err != nil {
 		log.Fatalf("Failed to create item and trigger: %v", err)
 	}
 
 }
 
-func createItemAndTrigger(apiKey string, hostID, name, key_, url, description string, expression string, preprocessing interface{}, delay string) (string, string, error) {
+func createItemAndTrigger(apiKey string, hostID, name, key_, url, description string, expression string, preprocessing interface{}, delay string, valueType string) (string, string, error) {
 	// Create an Item using parameters provided
 
-	itemID, err := createItem(apiKey, hostID, name, key_, url, preprocessing, delay)
+	itemID, err := createItem(apiKey, hostID, name, key_, url, preprocessing, delay, valueType)
 	if err != nil {
 		return "", "", err
 	}

@@ -7,13 +7,13 @@ import (
 	"net/http"
 )
 
-func createItem(apiKey string, hostID, name, key_, url, preprocessing interface{}, delay string) (string, error) {
+func createItem(apiKey string, hostID, name, key_, url, preprocessing interface{}, delay string, valueType string) (string, error) {
 	itemParams := map[string]interface{}{
 		"hostid":        hostID,
 		"name":          name,
 		"key_":          key_,
 		"type":          19, // HTTP Agent
-		"value_type":    4,
+		"value_type":    valueType,
 		"url":           url,
 		"delay":         delay,
 		"timeout":       "30",
@@ -50,6 +50,7 @@ func createTrigger(apiKey, description, expression, url string) (string, error) 
 		"expression":  expression,
 		"url":         url,
 		"priority":    4,
+		"opdata":      "{ITEM.LASTVALUE1}",
 	}
 
 	triggerRequest := ZabbixRequest{

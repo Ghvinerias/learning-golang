@@ -26,19 +26,18 @@ var itemPreProcessing, triggerExpression, triggerName string
 func generateItemAndTriggerParams(input ApplicationParameters) ItemAndTriggerParameters {
 	// Split the itemServer to get the number part (e.g., IISAppC-01 => 01)
 	serverNumber := strings.Split(input.itemServer, "-")[1]
+	//serviceName := strings.Split(input.itemName, ".")[0]
 
 	// Combine itemName and itemServer with an underscore
-	itemName := input.itemName + "_" + input.itemServer + ".API"
+	itemName := input.itemName + "_" + input.itemServer
 
 	// Generate itemKey
-	itemKey := input.itemName + ".API"
+	itemKey := input.itemName
 
 	// Define URLs based on itemServer
-	itemURL := "https://" + input.itemName + "." + serverNumber + ".API.slick.ge/" + getCheckTypeURL(input.itemCheckType)
+	itemURL := "https://" + strings.Split(input.itemName, ".")[0] + "." + serverNumber + ".API.slick.ge/" + getCheckTypeURL(input.itemCheckType)
 	triggerURL := itemURL
 	itemPreProcessing = input.preProcessingType
-
-
 
 	if input.itemCheckType == "Swagger" {
 		triggerExpression = "last(/Web Monitoring/" + itemKey + ")<>200"

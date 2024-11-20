@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 )
@@ -30,6 +31,7 @@ var (
 	apiURL         string
 	apiKey         string
 	baseURL        string
+	valueType      string
 	itemProcessing PreprocessingVariants
 )
 
@@ -49,7 +51,7 @@ func init() {
 		Regexv1: []map[string]interface{}{
 			{
 				"type":                 "5",
-				"params":               `HTTP\/1.1 ([0-9]+)\n\\1`,
+				"params":               json.RawMessage(`"HTTP\/1.1 ([0-9]+)\n\\1"`),
 				"error_handler":        0,
 				"error_handler_params": nil,
 			},
@@ -57,7 +59,7 @@ func init() {
 		Regexv2: []map[string]interface{}{
 			{
 				"type":                 "5",
-				"params":               `HTTP\/2 ([0-9]+)\n\\1`,
+				"params":               json.RawMessage(`"HTTP\/2 ([0-9]+)\n\\1"`),
 				"error_handler":        0,
 				"error_handler_params": nil,
 			},
