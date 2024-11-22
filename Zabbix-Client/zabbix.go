@@ -7,7 +7,33 @@ import (
 	"net/http"
 )
 
-func createItem(apiKey string, hostID, name, key_, url, preprocessing interface{}, delay string, valueType string) (string, error) {
+func zabbixAPICall(request ZabbixRequest, response *ZabbixResponse) error {
+	reqBody, err := json.MarshalIndent(request, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %v", err)
+	}
+
+	// Print the full JSON request being sent
+	fmt.Println("Zabbix API Request:", string(reqBody))
+
+	resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return fmt.Errorf("failed to make API call: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
+		return fmt.Errorf("failed to decode response: %v", err)
+	}
+
+	if response.Error != nil {
+		return fmt.Errorf("API error: %v", response.Error)
+	}
+
+	return nil
+}
+
+func createItem(hostID, name, key_, url, preprocessing interface{}, delay string, valueType string) (string, error) {
 	itemParams := map[string]interface{}{
 		"hostid":        hostID,
 		"name":          name,
@@ -44,7 +70,7 @@ func createItem(apiKey string, hostID, name, key_, url, preprocessing interface{
 	return itemID, nil
 }
 
-func createTrigger(apiKey, description, expression, url string) (string, error) {
+func createTrigger(description, expression, url string) (string, error) {
 	triggerParams := map[string]interface{}{
 		"description": description,
 		"expression":  expression,
@@ -76,32 +102,6 @@ func createTrigger(apiKey, description, expression, url string) (string, error) 
 	return triggerID, nil
 }
 
-func zabbixAPICall(request ZabbixRequest, response *ZabbixResponse) error {
-	reqBody, err := json.MarshalIndent(request, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	// Print the full JSON request being sent
-	fmt.Println("Zabbix API Request:", string(reqBody))
-
-	resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(reqBody))
-	if err != nil {
-		return fmt.Errorf("failed to make API call: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
-		return fmt.Errorf("failed to decode response: %v", err)
-	}
-
-	if response.Error != nil {
-		return fmt.Errorf("API error: %v", response.Error)
-	}
-
-	return nil
-}
-
 func getHostID(hostname string) (string, error) {
 	params := map[string]interface{}{
 		"output": []string{"hostid"},
@@ -131,4 +131,38 @@ func getHostID(hostname string) (string, error) {
 
 	hostID := result[0].(map[string]interface{})["hostid"].(string)
 	return hostID, nil
+}
+
+func getAllItems(hostID string) ([]map[string]interface{}, error) {
+	params := map[string]interface{}{
+		"output":  []string{"name", "value_type"}, // Only fetch name and value_type for performance
+		"hostids": hostID,                         // Fetch items for the specific host
+	}
+
+	request := ZabbixRequest{
+		Jsonrpc: "2.0",
+		Method:  "item.get",
+		Params:  params,
+		Auth:    apiKey,
+		ID:      1,
+	}
+
+	var response ZabbixResponse
+	err := zabbixAPICall(request, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	result, ok := response.Result.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected response format")
+	}
+
+	// Convert results to []map[string]interface{} for easier processing
+	items := make([]map[string]interface{}, len(result))
+	for i, item := range result {
+		items[i] = item.(map[string]interface{})
+	}
+
+	return items, nil
 }

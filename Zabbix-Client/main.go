@@ -6,27 +6,27 @@ import (
 )
 
 func main() {
-	// Example input
+	//Declare Host name in Zabbix
+	hostname := "Web Monitoring"
+	// Get Host ID by Host Name
+	hostID, err := getHostID(hostname)
+	if err != nil {
+		log.Fatalf("Failed to get host ID: %v", err)
+	}
+	fmt.Printf("Got HostID: %s\n", hostID)
+
+	printItemsWithValueType(hostID)
+	// updatePreprocessingForItems()
+
+/* 	// Example input
 	appInput := ApplicationParameters{
 		itemName:          "Example.API",
 		itemServer:        "IISAppC-01",
 		itemCheckType:     "HealthCheck",
 		preProcessingType: "Regexv1",
 	}
-
 	// Generate Item and Trigger Parameters
 	result := generateItemAndTriggerParams(appInput)
-
-	//Declare Host name in Zabbix
-	hostname := "Web Monitoring"
-
-	// Get Host ID by Host Name
-	hostID, err := getHostID(hostname)
-	if err != nil {
-		log.Fatalf("Failed to get host ID: %v", err)
-	}
-	// fmt.Printf("Host ID for '%s' is: %s\n", hostname, hostID)
-
 	if result.itemPreProcessing == "Regexv1" {
 		preProcessing = itemProcessing.Regexv1.([]map[string]interface{})
 		valueType = "3"
@@ -37,36 +37,30 @@ func main() {
 		preProcessing = itemProcessing.JsonParsing.([]map[string]interface{})
 		valueType = "5"
 	}
-
-	// // Pass the asserted value to the function
-	// item, trigger, err := createItemAndTrigger(apiKey, hostID, result.itemName, result.itemKey, result.itemURL, result.triggerURL, result.triggerExpression, preProcessing, "2")
-	// if err != nil {
-	// 	log.Fatalf("Failed to create item and trigger: %v", err)
-	// }
-	// fmt.Printf("item '%s\n' trigger %s\n", item, trigger)
 	// Pass the asserted value to the function
-
-	_, _, err = createItemAndTrigger(apiKey, hostID, result.itemName, result.itemKey, result.itemURL, result.triggerURL, result.triggerExpression, preProcessing, "2m", valueType)
+	item, trigger, err := createItemAndTrigger(hostID, result.itemAndTriggerName, result.itemKey, result.itemURL, result.triggerURL, result.triggerExpression, preProcessing, "2", valueType)
 	if err != nil {
-		log.Fatalf("Failed to create item and trigger: %v", err)
+		fmt.Printf("Failed to create item and trigger: %v", err)
+		// log.Fatalf("Failed to create item and trigger: %v", err)
 	}
+	fmt.Printf("item '%s\n' trigger %s\n", item, trigger) */
 
-}
+	/*
+		 	appInput2 := ItemAndTriggerParameters{
+				itemAndTriggerName: "Example.API",
+				itemKey:            "",
+				itemURL:            "",
+				itemPreProcessing:  "",
+				triggerExpression:  "",
+				triggerURL:         "",
+			}
 
-func createItemAndTrigger(apiKey string, hostID, name, key_, url, description string, expression string, preprocessing interface{}, delay string, valueType string) (string, string, error) {
-	// Create an Item using parameters provided
-
-	itemID, err := createItem(apiKey, hostID, name, key_, url, preprocessing, delay, valueType)
-	if err != nil {
-		return "", "", err
-	}
-	fmt.Printf("Item created with ID: %s\n", itemID)
-
-	// Create a trigger using the created item key
-	triggerID, err := createTrigger(apiKey, description, expression, url)
-	if err != nil {
-		return "", "", err
-	}
-	fmt.Printf("Trigger created with ID: %s\n", triggerID)
-	return itemID, triggerID, nil
+			// Pass the asserted value to the function
+			item, trigger, err := createItemAndTrigger(hostID, appInput2.itemAndTriggerName, appInput2.itemKey, appInput2.itemURL, appInput2.triggerURL, appInput2.triggerExpression, appInput2.itemPreProcessing, "2", valueType)
+			if err != nil {
+				fmt.Printf("Failed to create item and trigger: %v", err)
+				// log.Fatalf("Failed to create item and trigger: %v", err)
+			}
+			fmt.Printf("item '%s\n' trigger %s\n", item, trigger)
+	*/
 }

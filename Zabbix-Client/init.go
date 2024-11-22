@@ -28,14 +28,31 @@ type PreprocessingVariants struct {
 }
 
 var (
-	apiURL         string
-	apiKey         string
-	baseURL        string
-	valueType      string
-	itemProcessing PreprocessingVariants
+	apiURL            string
+	apiKey            string
+	baseURL           string
+	valueType         string
+	itemProcessing    PreprocessingVariants
+	preProcessing     interface{}
+	itemPreProcessing string
+	triggerExpression string
+	triggerName       string
 )
 
-var preProcessing interface{}
+type ApplicationParameters struct {
+	itemName          string
+	itemServer        string
+	itemCheckType     string
+	preProcessingType string
+}
+type ItemAndTriggerParameters struct {
+	itemAndTriggerName string
+	itemKey            string
+	itemURL            string
+	itemPreProcessing  string
+	triggerExpression  string
+	triggerURL         string
+}
 
 func init() {
 	// Initialize API URL and Key from environment variables
