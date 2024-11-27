@@ -29,6 +29,7 @@ type PreprocessingVariants struct {
 
 var (
 	apiURL            string
+	hostID            int
 	apiKey            string
 	baseURL           string
 	valueType         string
@@ -45,13 +46,30 @@ type ApplicationParameters struct {
 	itemCheckType     string
 	preProcessingType string
 }
+
 type ItemAndTriggerParameters struct {
+	monitoringHostID   string
 	itemAndTriggerName string
 	itemKey            string
+	itemValueType      string
+	delay              string
 	itemURL            string
-	itemPreProcessing  string
+	itemPreProcessing  interface{}
 	triggerExpression  string
 	triggerURL         string
+	hostID             string
+}
+
+type inputParams struct {
+	monitoringHostID   string
+	itemAndTriggerName string
+	itemKey            string
+	itemValueType      string
+	itemAndTriggerURL  string
+	itemDelay          string
+	itepPreProcessing  interface{}
+	triggerExpression  string
+	description        string
 }
 
 func init() {

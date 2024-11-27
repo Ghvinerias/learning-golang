@@ -65,17 +65,17 @@ func generateItemAndTriggerParams(input ApplicationParameters) ItemAndTriggerPar
 	}
 }
 
-func createItemAndTrigger(hostID, name, key_, url, description string, expression string, preprocessing interface{}, delay string, valueType string) (string, string, error) {
+func createItemAndTrigger(input ItemAndTriggerParameters) (string, string, error) {
 	// Create an Item using parameters provided
 
-	itemID, err := createItem(hostID, name, key_, url, preprocessing, delay, valueType)
+	itemID, err := createItem(input.monitoringHostID, input.itemAndTriggerName, input.itemKey, input.itemURL, input.itemPreProcessing, input.delay, input.itemValueType)
 	if err != nil {
 		return "", "", err
 	}
 	fmt.Printf("Item created with ID: %s\n", itemID)
 
 	// Create a trigger using the created item key
-	triggerID, err := createTrigger(description, expression, url)
+	triggerID, err := createTrigger(input.itemURL, input.triggerExpression, input.itemURL)
 	if err != nil {
 		return "", "", err
 	}
