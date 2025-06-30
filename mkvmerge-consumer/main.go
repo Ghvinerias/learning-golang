@@ -16,13 +16,13 @@ import (
 
 // RabbitMQ connection details (you may want to load these from environment variables)
 const (
-	rabbitmqHost     = "localhost"
+	rabbitmqHost     = "10.10.40.19"
 	rabbitmqPort     = "5672"
-	rabbitmqUsername = "guest"
-	rabbitmqPassword = "guest"
-	rabbitmqVhost    = "/"      // Default virtual host
-	queueName        = "mkvmerge.tasks" // Queue to consume from
-	doneQueueName    = "mkvmerge.done"  // Queue to publish to when done
+	rabbitmqUsername = "mkvmerge-consumer"
+	rabbitmqPassword = "mkvmerge-consumer"
+	rabbitmqVhost    = "media-automation"
+	queueName        = "mkvmerge.tasks"     // Queue to consume from
+	doneQueueName    = "mkvmerge.done"      // Queue to publish to when done
 	dlqQueueName     = "mkvmerge.tasks_DLQ" // Dead Letter Queue for failed messages
 )
 
@@ -44,26 +44,116 @@ var CategoryPathMap = map[string]string{
 func failOnError(err error, msg string) {
 	if err != nil {
 		log.Fatalf("%s: %s", msg, err)
+		osExit(1)
 	}
 }
 
 // ensureQueueExists creates a queue if it does not already exist
 func ensureQueueExists(ch *amqp.Channel, qName string) amqp.Queue {
 	q, err := ch.QueueDeclare(
-		qName,  // name
-		true,   // durable
-		false,  // delete when unused
-		false,  // exclusive
-		false,  // no-wait
-		nil,    // arguments
+		qName, // name
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
 	)
 	failOnError(err, fmt.Sprintf("Failed to declare queue '%s'", qName))
 	log.Printf("Queue '%s' declared", qName)
 	return q
 }
 
+// ensureMainQueueWithDLX creates the main processing queue with Dead Letter Exchange configuration
+func ensureMainQueueWithDLX(ch *amqp.Channel) amqp.Queue {
+	// First, declare the DLX exchange
+	err := ch.ExchangeDeclare(
+		"dlx",    // name
+		"direct", // type
+		true,     // durable
+		false,    // auto-deleted
+		false,    // internal
+		false,    // no-wait
+		nil,      // arguments
+	)
+	failOnError(err, "Failed to declare DLX exchange")
+
+	// Try to declare the main queue with DLX configuration
+	q, err := ch.QueueDeclare(
+		queueName, // name
+		true,      // durable
+		false,     // delete when unused
+		false,     // exclusive
+		false,     // no-wait
+		amqp.Table{
+			"x-dead-letter-exchange":    "dlx",
+			"x-dead-letter-routing-key": dlqQueueName,
+		}, // arguments
+	)
+
+	// If we get a precondition failed error, try to delete and recreate the queue
+	if err != nil && isInequivalentArgError(err) {
+		log.Printf("Queue '%s' exists with different configuration, attempting to delete and recreate...", queueName)
+
+		// Try to delete the existing queue (this will fail if it has messages)
+		_, deleteErr := ch.QueueDelete(queueName, false, false, false)
+		if deleteErr != nil {
+			log.Printf("Warning: Could not delete existing queue '%s': %v", queueName, deleteErr)
+			log.Printf("You may need to manually delete the queue '%s' from RabbitMQ management interface", queueName)
+			failOnError(err, fmt.Sprintf("Failed to declare main queue '%s' with DLX (queue exists with different config)", queueName))
+		}
+
+		// Try to declare again after deletion
+		q, err = ch.QueueDeclare(
+			queueName, // name
+			true,      // durable
+			false,     // delete when unused
+			false,     // exclusive
+			false,     // no-wait
+			amqp.Table{
+				"x-dead-letter-exchange":    "dlx",
+				"x-dead-letter-routing-key": dlqQueueName,
+			}, // arguments
+		)
+		if err != nil {
+			failOnError(err, fmt.Sprintf("Failed to declare main queue '%s' with DLX after deletion", queueName))
+		}
+		log.Printf("Successfully recreated queue '%s' with DLX configuration", queueName)
+	} else if err != nil {
+		failOnError(err, fmt.Sprintf("Failed to declare main queue '%s' with DLX", queueName))
+	} else {
+		log.Printf("Main queue '%s' declared with DLX configuration", queueName)
+	}
+
+	// Ensure DLQ exists and bind to the DLX exchange
+	_ = ensureQueueExists(ch, dlqQueueName)
+
+	err = ch.QueueBind(
+		dlqQueueName, // queue name
+		dlqQueueName, // routing key
+		"dlx",        // exchange
+		false,
+		nil,
+	)
+	failOnError(err, "Failed to bind DLQ to DLX")
+	log.Printf("DLQ '%s' bound to DLX exchange", dlqQueueName)
+
+	return q
+}
+
+// isInequivalentArgError checks if the error is due to inequivalent arguments
+func isInequivalentArgError(err error) bool {
+	if amqpErr, ok := err.(*amqp.Error); ok {
+		return amqpErr.Code == 406 &&
+			(amqpErr.Reason == "PRECONDITION_FAILED" ||
+				amqpErr.Reason != "" &&
+					(amqpErr.Reason[:len("PRECONDITION_FAILED")] == "PRECONDITION_FAILED" ||
+						amqpErr.Reason[:len("inequivalent arg")] == "inequivalent arg"))
+	}
+	return false
+}
+
 // publishDoneMessage publishes a message to the done queue
-func publishDoneMessage(ch *amqp.Channel, filename string) error {
+func publishDoneMessage(ch ChannelInterface, filename string) error {
 	// Create a simple message with the filename
 	message := map[string]string{
 		"filename": filename,
@@ -84,8 +174,8 @@ func publishDoneMessage(ch *amqp.Channel, filename string) error {
 		false,         // mandatory
 		false,         // immediate
 		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        body,
+			ContentType:  "application/json",
+			Body:         body,
 			DeliveryMode: amqp.Persistent, // make message persistent
 		})
 
@@ -135,6 +225,38 @@ func publishToDLQ(ch *amqp.Channel, body []byte, reason string) error {
 	return nil
 }
 
+// rejectMessageToDLQ rejects a message and routes it to the DLQ automatically
+func rejectMessageToDLQ(d amqp.Delivery, reason string) error {
+	log.Printf("Rejecting message to DLQ with reason: %s", reason)
+
+	// Reject the message with requeue=false, which will send it to DLX
+	err := d.Reject(false)
+	if err != nil {
+		return fmt.Errorf("failed to reject message: %v", err)
+	}
+
+	log.Printf("Message rejected and routed to DLQ: %s", reason)
+	return nil
+}
+
+// ChannelInterface defines the interface for RabbitMQ channel operations needed by our application
+type ChannelInterface interface {
+	QueueDeclare(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table) (amqp.Queue, error)
+	Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error
+	ExchangeDeclare(name, kind string, durable, autoDelete, internal, noWait bool, args amqp.Table) error
+	QueueDelete(name string, ifUnused, ifEmpty, noWait bool) (int, error)
+	QueueBind(name, key, exchange string, noWait bool, args amqp.Table) error
+	Qos(prefetchCount, prefetchSize int, global bool) error
+	Consume(queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table) (<-chan amqp.Delivery, error)
+	Close() error
+}
+
+// Ensure amqp.Channel implements our interface at compile time
+var _ ChannelInterface = (*amqp.Channel)(nil)
+
+// Helper variable to make failOnError testable
+var osExit = os.Exit
+
 func main() {
 	// Set up logging
 	log.SetOutput(os.Stdout)
@@ -156,9 +278,9 @@ func main() {
 	log.Println("Channel opened")
 
 	// Declare queues (ensures they exist)
-	processingQueue := ensureQueueExists(ch, queueName)
-	_ = ensureQueueExists(ch, doneQueueName) // Ensure done queue exists
-	_ = ensureQueueExists(ch, dlqQueueName) // Ensure dead letter queue exists
+	processingQueue := ensureMainQueueWithDLX(ch) // Use DLX-configured queue
+	_ = ensureQueueExists(ch, doneQueueName)      // Ensure done queue exists
+	_ = ensureQueueExists(ch, dlqQueueName)       // Ensure dead letter queue exists
 
 	// Set QoS (prefetch count)
 	err = ch.Qos(
@@ -224,6 +346,10 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 	var msg Message
 	if err := json.Unmarshal(body, &msg); err != nil {
 		log.Printf("Error parsing message JSON: %v", err)
+		// Reject message to DLQ for parsing errors
+		if err := rejectMessageToDLQ(d, fmt.Sprintf("JSON parsing error: %v", err)); err != nil {
+			log.Printf("Error rejecting message to DLQ: %v", err)
+		}
 		return
 	}
 
@@ -231,18 +357,10 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 	basePath, exists := CategoryPathMap[msg.Category]
 	if !exists {
 		log.Printf("Unknown category: %s", msg.Category)
-		
-		// Send to Dead Letter Queue
+		// Reject message to DLQ for unknown category
 		reason := fmt.Sprintf("Unknown category: %s", msg.Category)
-		if err := publishToDLQ(ch, body, reason); err != nil {
-			log.Printf("Error publishing to DLQ: %v", err)
-		}
-		
-		// Acknowledge the original message to remove it from the main queue
-		if err := d.Ack(false); err != nil {
-			log.Printf("Error acknowledging message with unknown category: %v", err)
-		} else {
-			log.Println("Message moved to DLQ and acknowledged (unknown category)")
+		if err := rejectMessageToDLQ(d, reason); err != nil {
+			log.Printf("Error rejecting message to DLQ: %v", err)
 		}
 		return
 	}
@@ -254,11 +372,10 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 	// Check if the folder exists
 	if _, err := os.Stat(folderPath); os.IsNotExist(err) {
 		log.Printf("Folder does not exist: %s", folderPath)
-		// Acknowledge the message since the folder doesn't exist and can't be processed
-		if err := d.Ack(false); err != nil {
-			log.Printf("Error acknowledging message with non-existent folder: %v", err)
-		} else {
-			log.Println("Message acknowledged (folder does not exist)")
+		// Reject message to DLQ for non-existent folder
+		reason := fmt.Sprintf("Folder does not exist: %s", folderPath)
+		if err := rejectMessageToDLQ(d, reason); err != nil {
+			log.Printf("Error rejecting message to DLQ: %v", err)
 		}
 		return
 	}
@@ -294,7 +411,7 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 
 	// Track successful file processing
 	successfullyProcessed := false
-	
+
 	// Process each MKV file
 	for _, file := range mkvFiles {
 		log.Printf("Processing file: %s", file)
@@ -421,7 +538,7 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 			}
 		}
 	}
-	
+
 	// If at least one file was processed successfully, acknowledge the original message
 	if successfullyProcessed {
 		if err := d.Ack(false); err != nil {

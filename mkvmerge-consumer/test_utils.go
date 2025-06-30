@@ -42,16 +42,16 @@ func (m *MockChannel) Consume(queue, consumer string, autoAck, exclusive, noLoca
 // It returns a function that replaces exec.Command and a channel to receive the executed commands
 func MockExecCommand(t *testing.T, mockOutput string, mockError error) (func(string, ...string) *exec.Cmd, chan []string) {
 	cmdChan := make(chan []string, 1)
-	
+
 	mockExecCommand := func(command string, args ...string) *exec.Cmd {
 		cmdArgs := append([]string{command}, args...)
 		cmdChan <- cmdArgs
-		
+
 		// Create a fake command that returns our mock output
 		cmd := exec.Command("echo", mockOutput)
 		return cmd
 	}
-	
+
 	return mockExecCommand, cmdChan
 }
 
@@ -60,7 +60,7 @@ func setupMessageTest(t *testing.T, msg Message, mockDeliveryAckError error) (*M
 	// Mock channel
 	mockChannel := new(MockChannel)
 	mockChannel.On("Publish", "", doneQueueName, false, false, mock.AnythingOfType("amqp.Publishing")).Return(nil)
-	
+
 	// Create delivery
 	msgBytes, _ := json.Marshal(msg)
 	mockDelivery := amqp.Delivery{
@@ -69,16 +69,16 @@ func setupMessageTest(t *testing.T, msg Message, mockDeliveryAckError error) (*M
 			ackError: mockDeliveryAckError,
 		},
 	}
-	
+
 	return mockChannel, mockDelivery
 }
 
 // mockAcknowledger implements the amqp.Acknowledger interface for testing
 type mockAcknowledger struct {
-	ackError error
+	ackError  error
 	nackError error
-	acked bool
-	nacked bool
+	acked     bool
+	nacked    bool
 }
 
 func (m *mockAcknowledger) Ack(tag uint64, multiple bool) error {
@@ -125,4 +125,22 @@ func (m *MockRabbitMQConnection) Close() error {
 func (m *MockRabbitMQConnection) NotifyClose(c chan *amqp.Error) chan *amqp.Error {
 	args := m.Called(c)
 	return args.Get(0).(chan *amqp.Error)
+}
+
+// ExchangeDeclare mock implementation
+func (m *MockChannel) ExchangeDeclare(name, kind string, durable, autoDelete, internal, noWait bool, args amqp.Table) error {
+	a := m.Called(name, kind, durable, autoDelete, internal, noWait, args)
+	return a.Error(0)
+}
+
+// QueueDelete mock implementation
+func (m *MockChannel) QueueDelete(name string, ifUnused, ifEmpty, noWait bool) (int, error) {
+	a := m.Called(name, ifUnused, ifEmpty, noWait)
+	return a.Int(0), a.Error(1)
+}
+
+// QueueBind mock implementation
+func (m *MockChannel) QueueBind(name, key, exchange string, noWait bool, args amqp.Table) error {
+	a := m.Called(name, key, exchange, noWait, args)
+	return a.Error(0)
 }

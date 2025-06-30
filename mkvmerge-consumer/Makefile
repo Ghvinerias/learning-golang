@@ -1,10 +1,10 @@
 # Golang Project Makefile
 # -----------------
-# Project: template
+# Project: mkvmerge-consumer
 # Date: June 30, 2025
 
 # Binary name
-BINARY_NAME := template
+BINARY_NAME := mkvmerge-consumer
 WINDOWS_BINARY := $(BINARY_NAME).exe
 LINUX_BINARY := $(BINARY_NAME)
 
