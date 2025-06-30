@@ -20,6 +20,7 @@ const (
 	rabbitmqPort     = "5672"
 	rabbitmqUsername = "guest"
 	rabbitmqPassword = "guest"
+	rabbitmqVhost    = "/"      // Default virtual host
 	queueName        = "mkvmerge.tasks" // Queue to consume from
 	doneQueueName    = "mkvmerge.done"  // Queue to publish to when done
 )
@@ -102,8 +103,8 @@ func main() {
 	log.Println("Starting RabbitMQ consumer...")
 
 	// Connect to RabbitMQ
-	connectionString := fmt.Sprintf("amqp://%s:%s@%s:%s/",
-		rabbitmqUsername, rabbitmqPassword, rabbitmqHost, rabbitmqPort)
+	connectionString := fmt.Sprintf("amqp://%s:%s@%s:%s/%s",
+		rabbitmqUsername, rabbitmqPassword, rabbitmqHost, rabbitmqPort, rabbitmqVhost)
 	conn, err := amqp.Dial(connectionString)
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
