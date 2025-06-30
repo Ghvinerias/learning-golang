@@ -23,6 +23,7 @@ const (
 	rabbitmqVhost    = "/"      // Default virtual host
 	queueName        = "mkvmerge.tasks" // Queue to consume from
 	doneQueueName    = "mkvmerge.done"  // Queue to publish to when done
+	dlqQueueName     = "mkvmerge.tasks_DLQ" // Dead Letter Queue for failed messages
 )
 
 // Message represents the structure of incoming RabbitMQ messages
@@ -96,6 +97,44 @@ func publishDoneMessage(ch *amqp.Channel, filename string) error {
 	return nil
 }
 
+// publishToDLQ publishes a message to the Dead Letter Queue with an error reason
+func publishToDLQ(ch *amqp.Channel, body []byte, reason string) error {
+	// Create a wrapper message with the original message and error reason
+	dlqMessage := map[string]interface{}{
+		"originalMessage": string(body),
+		"errorReason":     reason,
+		"timestamp":       time.Now().Format(time.RFC3339),
+	}
+
+	// Convert to JSON
+	dlqBody, err := json.Marshal(dlqMessage)
+	if err != nil {
+		return fmt.Errorf("failed to marshal DLQ message: %v", err)
+	}
+
+	// Ensure DLQ exists
+	_ = ensureQueueExists(ch, dlqQueueName)
+
+	// Publish to the DLQ
+	err = ch.Publish(
+		"",           // exchange
+		dlqQueueName, // routing key
+		false,        // mandatory
+		false,        // immediate
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         dlqBody,
+			DeliveryMode: amqp.Persistent, // make message persistent
+		})
+
+	if err != nil {
+		return fmt.Errorf("failed to publish to DLQ: %v", err)
+	}
+
+	log.Printf("Published message to DLQ %s with reason: %s", dlqQueueName, reason)
+	return nil
+}
+
 func main() {
 	// Set up logging
 	log.SetOutput(os.Stdout)
@@ -119,6 +158,7 @@ func main() {
 	// Declare queues (ensures they exist)
 	processingQueue := ensureQueueExists(ch, queueName)
 	_ = ensureQueueExists(ch, doneQueueName) // Ensure done queue exists
+	_ = ensureQueueExists(ch, dlqQueueName) // Ensure dead letter queue exists
 
 	// Set QoS (prefetch count)
 	err = ch.Qos(
@@ -191,11 +231,18 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 	basePath, exists := CategoryPathMap[msg.Category]
 	if !exists {
 		log.Printf("Unknown category: %s", msg.Category)
-		// Acknowledge the message since the category is unknown and can't be processed
+		
+		// Send to Dead Letter Queue
+		reason := fmt.Sprintf("Unknown category: %s", msg.Category)
+		if err := publishToDLQ(ch, body, reason); err != nil {
+			log.Printf("Error publishing to DLQ: %v", err)
+		}
+		
+		// Acknowledge the original message to remove it from the main queue
 		if err := d.Ack(false); err != nil {
 			log.Printf("Error acknowledging message with unknown category: %v", err)
 		} else {
-			log.Println("Message acknowledged (unknown category)")
+			log.Println("Message moved to DLQ and acknowledged (unknown category)")
 		}
 		return
 	}
