@@ -9,6 +9,35 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// MockChannel mocks the amqp.Channel interface
+type MockChannel struct {
+	mock.Mock
+}
+
+// Implement the Publish method for MockChannel
+func (m *MockChannel) Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
+	args := m.Called(exchange, key, mandatory, immediate, msg)
+	return args.Error(0)
+}
+
+// QueueDeclare mock implementation
+func (m *MockChannel) QueueDeclare(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table) (amqp.Queue, error) {
+	a := m.Called(name, durable, autoDelete, exclusive, noWait, args)
+	return a.Get(0).(amqp.Queue), a.Error(1)
+}
+
+// Qos mock implementation
+func (m *MockChannel) Qos(prefetchCount, prefetchSize int, global bool) error {
+	a := m.Called(prefetchCount, prefetchSize, global)
+	return a.Error(0)
+}
+
+// Consume mock implementation
+func (m *MockChannel) Consume(queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table) (<-chan amqp.Delivery, error) {
+	a := m.Called(queue, consumer, autoAck, exclusive, noLocal, noWait, args)
+	return a.Get(0).(<-chan amqp.Delivery), a.Error(1)
+}
+
 // MockExecCommand is a utility function to mock exec.Command
 // It returns a function that replaces exec.Command and a channel to receive the executed commands
 func MockExecCommand(t *testing.T, mockOutput string, mockError error) (func(string, ...string) *exec.Cmd, chan []string) {
