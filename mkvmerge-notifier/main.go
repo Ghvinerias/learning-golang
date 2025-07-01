@@ -27,8 +27,8 @@ const (
 
 // Telegram bot configuration (you should load these from environment variables)
 const (
-	telegramBotToken = "YOUR_BOT_TOKEN_HERE" // Replace with your actual bot token
-	telegramChatID   = -1001234567890        // Replace with your actual chat ID
+	telegramBotToken = ""   // Replace with your actual bot token
+	telegramChatID   = 1234 // Replace with your actual chat ID
 )
 
 // Message represents the structure of incoming RabbitMQ messages from mkvmerge.done queue
@@ -62,9 +62,13 @@ func ensureQueueExists(ch *amqp.Channel, qName string) amqp.Queue {
 }
 
 // ensureMainQueueWithDLX creates the main processing queue with Dead Letter Exchange configuration
-func ensureMainQueueWithDLX(ch *amqp.Channel) amqp.Queue {
+func ensureMainQueueWithDLX(conn *amqp.Connection) (amqp.Queue, *amqp.Channel) {
+	// Create a new channel for queue operations
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to open channel for queue operations")
+
 	// First, declare the DLX exchange
-	err := ch.ExchangeDeclare(
+	err = ch.ExchangeDeclare(
 		"dlx",    // name
 		"direct", // type
 		true,     // durable
@@ -88,34 +92,34 @@ func ensureMainQueueWithDLX(ch *amqp.Channel) amqp.Queue {
 		}, // arguments
 	)
 
-	// If we get a precondition failed error, try to delete and recreate the queue
+	// If we get a precondition failed error, the queue exists with different configuration
 	if err != nil && isInequivalentArgError(err) {
-		log.Printf("Queue '%s' exists with different configuration, attempting to delete and recreate...", queueName)
+		log.Printf("Queue '%s' exists with different configuration", queueName)
 
-		// Try to delete the existing queue (this will fail if it has messages)
-		_, deleteErr := ch.QueueDelete(queueName, false, false, false)
-		if deleteErr != nil {
-			log.Printf("Warning: Could not delete existing queue '%s': %v", queueName, deleteErr)
-			log.Printf("You may need to manually delete the queue '%s' from RabbitMQ management interface", queueName)
-			failOnError(err, fmt.Sprintf("Failed to declare main queue '%s' with DLX (queue exists with different config)", queueName))
-		}
+		// Close the current channel and create a new one since RabbitMQ may have closed it
+		ch.Close()
+		ch, err = conn.Channel()
+		failOnError(err, "Failed to reopen channel after queue configuration mismatch")
 
-		// Try to declare again after deletion
-		q, err = ch.QueueDeclare(
+		// Try to use the existing queue by declaring it passively (just check if it exists)
+		log.Printf("Attempting to use existing queue '%s' as-is...", queueName)
+		q, err = ch.QueueDeclarePassive(
 			queueName, // name
-			true,      // durable
+			true,      // durable (we'll accept whatever it is)
 			false,     // delete when unused
 			false,     // exclusive
 			false,     // no-wait
-			amqp.Table{
-				"x-dead-letter-exchange":    "dlx",
-				"x-dead-letter-routing-key": dlqQueueName,
-			}, // arguments
+			nil,       // arguments
 		)
+
 		if err != nil {
-			failOnError(err, fmt.Sprintf("Failed to declare main queue '%s' with DLX after deletion", queueName))
+			log.Printf("Failed to access existing queue '%s': %v", queueName, err)
+			log.Printf("Warning: Queue '%s' exists but cannot be accessed with current configuration", queueName)
+			log.Printf("Consider manually deleting the queue '%s' from RabbitMQ management interface if you want DLX functionality", queueName)
+			failOnError(err, fmt.Sprintf("Cannot access existing queue '%s'", queueName))
+		} else {
+			log.Printf("Successfully using existing queue '%s' (DLX functionality may not be available)", queueName)
 		}
-		log.Printf("Successfully recreated queue '%s' with DLX configuration", queueName)
 	} else if err != nil {
 		failOnError(err, fmt.Sprintf("Failed to declare main queue '%s' with DLX", queueName))
 	} else {
@@ -132,10 +136,13 @@ func ensureMainQueueWithDLX(ch *amqp.Channel) amqp.Queue {
 		false,
 		nil,
 	)
-	failOnError(err, "Failed to bind DLQ to DLX")
-	log.Printf("DLQ '%s' bound to DLX exchange", dlqQueueName)
+	if err != nil {
+		log.Printf("Warning: Failed to bind DLQ to DLX: %v (DLX functionality may not work)", err)
+	} else {
+		log.Printf("DLQ '%s' bound to DLX exchange", dlqQueueName)
+	}
 
-	return q
+	return q, ch
 }
 
 // isInequivalentArgError checks if the error is due to inequivalent arguments
@@ -205,6 +212,7 @@ func rejectMessageToDLQ(d amqp.Delivery, reason string) error {
 // ChannelInterface defines the interface for RabbitMQ channel operations needed by our application
 type ChannelInterface interface {
 	QueueDeclare(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table) (amqp.Queue, error)
+	QueueDeclarePassive(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table) (amqp.Queue, error)
 	Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error
 	ExchangeDeclare(name, kind string, durable, autoDelete, internal, noWait bool, args amqp.Table) error
 	QueueDelete(name string, ifUnused, ifEmpty, noWait bool) (int, error)
@@ -295,12 +303,13 @@ func main() {
 	defer ch.Close()
 	log.Println("Channel opened")
 
-	// Declare queues (ensures they exist)
-	processingQueue := ensureMainQueueWithDLX(ch) // Use DLX-configured queue
-	_ = ensureQueueExists(ch, dlqQueueName)       // Ensure dead letter queue exists
+	// Declare queues (ensures they exist) - this may create a new channel if needed
+	processingQueue, mainCh := ensureMainQueueWithDLX(conn) // Use DLX-configured queue
+	defer mainCh.Close()
+	_ = ensureQueueExists(mainCh, dlqQueueName) // Ensure dead letter queue exists
 
 	// Set QoS (prefetch count)
-	err = ch.Qos(
+	err = mainCh.Qos(
 		1,     // prefetch count (process one message at a time)
 		0,     // prefetch size
 		false, // global
@@ -308,7 +317,7 @@ func main() {
 	failOnError(err, "Failed to set QoS")
 
 	// Register consumer
-	msgs, err := ch.Consume(
+	msgs, err := mainCh.Consume(
 		processingQueue.Name, // queue
 		"",                   // consumer tag (empty means auto-generated)
 		false,                // auto-ack (false means manual acknowledgment)
@@ -333,7 +342,7 @@ func main() {
 			log.Printf("Received a message: %s", d.Body)
 
 			// Process the message and acknowledge only after successful notification
-			processMessage(ch, bot, d, d.Body)
+			processMessage(mainCh, bot, d, d.Body)
 		}
 	}()
 
