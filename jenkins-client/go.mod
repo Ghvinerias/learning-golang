@@ -1,8 +1,7 @@
 module jenkins-client
 
-go 1.18
+go 1.23.0
 
-require (
-	github.com/bndr/gojenkins v1.1.0 // indirect
-	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa // indirect
-)
+require github.com/bndr/gojenkins v1.1.0
+
+require golang.org/x/net v0.38.0 // indirect
