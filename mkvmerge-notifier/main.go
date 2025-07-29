@@ -10,25 +10,17 @@ import (
 	"syscall"
 	"time"
 
+	"mkvmerge-notifier/config"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/streadway/amqp"
 )
 
-// RabbitMQ connection details (you may want to load these from environment variables)
-const (
-	rabbitmqHost     = "10.10.40.19"
-	rabbitmqPort     = "5672"
-	rabbitmqUsername = "mkvmerge-notifier"
-	rabbitmqPassword = "mkvmerge-notifier"
-	rabbitmqVhost    = "media-automation"
-	queueName        = "mkvmerge.done"     // Queue to consume from
-	dlqQueueName     = "mkvmerge.done_DLQ" // Dead Letter Queue for failed messages
-)
-
-// Telegram bot configuration (you should load these from environment variables)
-const (
-	telegramBotToken = ""   // Replace with your actual bot token
-	telegramChatID   = 1234 // Replace with your actual chat ID
+// Global configuration
+var (
+	cfg          *config.Config
+	queueName    string
+	dlqQueueName string
 )
 
 // Message represents the structure of incoming RabbitMQ messages from mkvmerge.done queue
@@ -238,7 +230,7 @@ var osExit = os.Exit
 
 // sendTelegramNotification sends a notification message via Telegram bot
 func sendTelegramNotification(bot TelegramBotInterface, message string) error {
-	msg := tgbotapi.NewMessage(telegramChatID, message)
+	msg := tgbotapi.NewMessage(cfg.Telegram.ChatID, message)
 	msg.ParseMode = "Markdown"
 
 	_, err := bot.Send(msg)
@@ -282,17 +274,28 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	log.Println("Starting MKV Notifier RabbitMQ consumer...")
 
+	// Load configuration
+	var err error
+	cfg, err = config.Load()
+	if err != nil {
+		failOnError(err, "Failed to load configuration")
+	}
+
+	// Set queue names from config
+	queueName = cfg.RabbitMQ.Queue.Done
+	dlqQueueName = cfg.RabbitMQ.Queue.DLQ
+
+	log.Printf("Configuration loaded successfully")
+
 	// Initialize Telegram bot
-	bot, err := tgbotapi.NewBotAPI(telegramBotToken)
+	bot, err := tgbotapi.NewBotAPI(cfg.Telegram.BotToken)
 	if err != nil {
 		failOnError(err, "Failed to initialize Telegram bot")
 	}
 	log.Printf("Telegram bot initialized: @%s", bot.Self.UserName)
 
 	// Connect to RabbitMQ
-	connectionString := fmt.Sprintf("amqp://%s:%s@%s:%s/%s",
-		rabbitmqUsername, rabbitmqPassword, rabbitmqHost, rabbitmqPort, rabbitmqVhost)
-	conn, err := amqp.Dial(connectionString)
+	conn, err := amqp.Dial(cfg.ConnectionString())
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 	log.Println("Successfully connected to RabbitMQ")

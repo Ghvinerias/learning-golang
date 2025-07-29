@@ -1,0 +1,22 @@
+services:
+  mkvmerge-notifier:
+    image: slickg/mkvmerge-notifier:latest
+    restart: unless-stopped
+    environment:
+      # RabbitMQ Configuration
+      - RABBITMQ_HOST=x.x.x.x
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=mkvmerge-notifier-user
+      - RABBITMQ_PASSWORD=mkvmerge-notifier-password
+      - RABBITMQ_VHOST=vhost-media-automation
+      # Queue names
+      - RABBITMQ_QUEUE_DONE=mkvmerge.done
+      - RABBITMQ_QUEUE_DLQ=mkvmerge.done_DLQ
+      # Telegram Configuration
+      - TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+      - TELEGRAM_CHAT_ID=your-telegram-chat-id
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

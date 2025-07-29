@@ -1,7 +1,7 @@
 # Golang Project Makefile
 # -----------------
 # Project: mkvmerge-notifier
-# Date: June 30, 2025
+# Date: July 29, 2025
 
 # Binary name
 BINARY_NAME := mkvmerge-notifier
@@ -19,31 +19,35 @@ GOOS_WINDOWS := GOOS=windows
 GOOS_LINUX := GOOS=linux
 GOARCH := GOARCH=amd64
 
+# Docker settings
+DOCKER_IMAGE_NAME := slickg/mkvmerge-notifier
+DOCKER_TAG := latest
+
 # Silence command echoing
 .SILENT:
 
 # Declare phony targets
-.PHONY: all clean build build-win build-linux test tidy help
+.PHONY: all clean build build-win build-linux test tidy help docker docker-build docker-push run
 
 # Default target
 all: clean build
 
 # Build for all platforms
-build: build-win build-linux
+build: tidy build-win build-linux
 	@echo "Build completed for all platforms"
 
 # Build for Windows
 build-win:
 	@echo "Building for Windows..."
 	mkdir -p $(WINDOWS_DIR)
-	$(GOOS_WINDOWS) $(GOARCH) $(GO) build -o $(WINDOWS_DIR)/$(WINDOWS_BINARY) main.go
+	$(GOOS_WINDOWS) $(GOARCH) $(GO) build -o $(WINDOWS_DIR)/$(WINDOWS_BINARY)
 	@echo "Windows build complete: $(WINDOWS_DIR)/$(WINDOWS_BINARY)"
 
 # Build for Linux
 build-linux:
 	@echo "Building for Linux..."
 	mkdir -p $(LINUX_DIR)
-	$(GOOS_LINUX) $(GOARCH) $(GO) build -o $(LINUX_DIR)/$(LINUX_BINARY) main.go
+	$(GOOS_LINUX) $(GOARCH) $(GO) build -o $(LINUX_DIR)/$(LINUX_BINARY)
 	@echo "Linux build complete: $(LINUX_DIR)/$(LINUX_BINARY)"
 
 # Clean build artifacts
@@ -64,13 +68,40 @@ tidy:
 	$(GO) mod tidy
 	@echo "Dependencies updated"
 
+# Build docker image
+docker-build:
+	@echo "Building Docker image..."
+	docker build -t $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) .
+	@echo "Docker image built: $(DOCKER_IMAGE_NAME):$(DOCKER_TAG)"
+
+# Push docker image
+docker-push:
+	@echo "Pushing Docker image..."
+	docker push $(DOCKER_IMAGE_NAME):$(DOCKER_TAG)
+	@echo "Docker image pushed: $(DOCKER_IMAGE_NAME):$(DOCKER_TAG)"
+
+# Docker build and push
+docker: docker-build docker-push
+
+# Run local binary
+run:
+	@echo "Running application..."
+	$(GO) run main.go
+	
 # Help documentation
 help:
 	@echo "Available targets:"
-	@echo "  all        - Clean and build for all platforms (default)"
-	@echo "  build      - Build for all platforms"
-	@echo "  build-win  - Build for Windows"
-	@echo "  build-linux- Build for Linux"
+	@echo "  all          - Clean and build for all platforms (default)"
+	@echo "  build        - Build for all platforms"
+	@echo "  build-win    - Build for Windows"
+	@echo "  build-linux  - Build for Linux"
+	@echo "  clean        - Clean build directories"
+	@echo "  test         - Run tests"
+	@echo "  tidy         - Tidy dependencies"
+	@echo "  docker-build - Build Docker image"
+	@echo "  docker-push  - Push Docker image"
+	@echo "  docker       - Build and push Docker image"
+	@echo "  run          - Run application locally"
 	@echo "  clean      - Remove build artifacts"
 	@echo "  test       - Run tests"
 	@echo "  tidy       - Tidy Go module dependencies"
