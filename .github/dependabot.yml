@@ -1,0 +1,156 @@
+version: 2
+updates:
+  # Main project
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # telegram-torrent-bot
+  - package-ecosystem: "gomod"
+    directory: "/telegram-torrent-bot"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "telegram-torrent-bot"
+    commit-message:
+      prefix: "deps(telegram-bot)"
+      include: "scope"
+
+  # mkvmerge-consumer
+  - package-ecosystem: "gomod"
+    directory: "/mkvmerge-consumer"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "mkvmerge-consumer"
+    commit-message:
+      prefix: "deps(mkvmerge)"
+      include: "scope"
+
+  # mkvmerge-notifier
+  - package-ecosystem: "gomod"
+    directory: "/mkvmerge-notifier"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "mkvmerge-notifier"
+    commit-message:
+      prefix: "deps(notifier)"
+      include: "scope"
+
+  # slick-auth
+  - package-ecosystem: "gomod"
+    directory: "/slick-auth"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "slick-auth"
+    commit-message:
+      prefix: "deps(auth)"
+      include: "scope"
+
+  # ConfigGen
+  - package-ecosystem: "gomod"
+    directory: "/ConfigGen"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "configgen"
+    commit-message:
+      prefix: "deps(configgen)"
+      include: "scope"
+
+  # web-to-pdf
+  - package-ecosystem: "gomod"
+    directory: "/web-to-pdf"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "web-to-pdf"
+    commit-message:
+      prefix: "deps(web-to-pdf)"
+      include: "scope"
+
+  # Zabbix-Client
+  - package-ecosystem: "gomod"
+    directory: "/Zabbix-Client"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "zabbix"
+    commit-message:
+      prefix: "deps(zabbix)"
+      include: "scope"
+
+  # bitwardern-sdk
+  - package-ecosystem: "gomod"
+    directory: "/bitwardern-sdk"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "bitwarden"
+    commit-message:
+      prefix: "deps(bitwarden)"
+      include: "scope"
+
+  # jenkins-client
+  - package-ecosystem: "gomod" 
+    directory: "/jenkins-client"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "jenkins"
+    commit-message:
+      prefix: "deps(jenkins)"
+      include: "scope"
+
+  # Add Docker support for telegram-torrent-bot
+  - package-ecosystem: "docker"
+    directory: "/telegram-torrent-bot"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "docker"
+      - "dependencies"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+
+  # GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "ci-cd"
+      - "dependencies"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
