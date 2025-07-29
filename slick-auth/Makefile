@@ -1,5 +1,10 @@
 .SILENT :
-.PHONY: run-test build-all tidy-do
+.PHONY: run-test build-all tidy-do deps
+
+deps:
+		go get github.com/joho/godotenv
+		go get github.com/spf13/viper
+		go mod tidy
 
 build-win:
 		GOOS=windows GOARCH=amd64 go build -o ./build/windows/slick-auth.exe main.go
@@ -18,4 +23,5 @@ remove-all:
 run-test:
 	go test -v
 tidy-do:
+	go mod tidy
 		go mod tidy
