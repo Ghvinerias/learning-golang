@@ -274,11 +274,29 @@ func main() {
 	defer conn.Close()
 	log.Println("Successfully connected to RabbitMQ")
 
+	// Set up connection monitoring
+	connClosed := make(chan *amqp.Error)
+	conn.NotifyClose(connClosed)
+
 	// Create a channel
 	ch, err := conn.Channel()
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 	log.Println("Channel opened")
+
+	// Set up channel monitoring
+	chClosed := make(chan *amqp.Error)
+	ch.NotifyClose(chClosed)
+
+	// Monitor channel health
+	go func() {
+		err := <-chClosed
+		log.Printf("RabbitMQ channel closed unexpectedly: %v", err)
+		// In a production environment, you might want to attempt to recreate the channel
+		// For simplicity, we'll just exit and let the container orchestration restart the process
+		log.Println("Channel closed - process will exit to allow container orchestration to restart it")
+		os.Exit(1)
+	}()
 
 	// Declare queues (ensures they exist)
 	processingQueue := ensureMainQueueWithDLX(ch) // Use DLX-configured queue
@@ -317,23 +335,71 @@ func main() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
 
-			// Process the message and acknowledge only after successful processing
-			processMessage(ch, d, d.Body)
+			// Create a timeout for message processing
+			done := make(chan bool, 1)
+			go func(msg amqp.Delivery) {
+				// Process the message and acknowledge only after successful processing
+				processMessage(ch, msg, msg.Body)
+				done <- true
+			}(d)
+
+			// Wait for either completion or timeout
+			select {
+			case <-done:
+				log.Println("Message processed within timeout")
+			case <-time.After(30 * time.Minute): // Adjust timeout as needed for your workload
+				log.Println("WARNING: Message processing timed out, rejecting message to avoid blocking")
+				if err := d.Reject(false); err != nil { // false = don't requeue
+					log.Printf("Error rejecting timed-out message: %v", err)
+				} else {
+					log.Println("Timed-out message rejected")
+				}
+			}
 		}
 	}()
 
-	// Wait for shutdown signal
+	// Wait for shutdown signal or connection close
 	go func() {
-		sig := <-shutdown
-		log.Printf("Received shutdown signal: %v", sig)
-		log.Println("Shutting down gracefully...")
+		select {
+		case sig := <-shutdown:
+			log.Printf("Received shutdown signal: %v", sig)
+			log.Println("Shutting down gracefully...")
 
-		// Close RabbitMQ connection
-		if err := conn.Close(); err != nil {
-			log.Printf("Error closing RabbitMQ connection: %v", err)
+			// Close RabbitMQ connection
+			if err := conn.Close(); err != nil {
+				log.Printf("Error closing RabbitMQ connection: %v", err)
+			}
+
+			close(forever)
+		case err := <-connClosed:
+			log.Printf("RabbitMQ connection closed: %v", err)
+			log.Println("Attempting to reconnect...")
+
+			// Signal that the process should restart
+			// In a production environment, you would implement reconnection logic here
+			// or use a supervisor (like systemd) to restart the process
+			log.Println("Connection lost - process will exit to allow container orchestration to restart it")
+			os.Exit(1) // Exit with error so container orchestration can restart
 		}
+	}()
 
-		close(forever)
+	// Start health check routine
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				if conn.IsClosed() {
+					log.Println("WARNING: RabbitMQ connection is closed")
+				} else {
+					log.Println("Health check: RabbitMQ connection is active")
+				}
+			case <-forever:
+				return
+			}
+		}
 	}()
 
 	log.Println("Consumer is now running. Press CTRL+C to exit")
