@@ -1,0 +1,26 @@
+services:
+  mkvmerge-consumer:
+    image: slickg/mkvmerge-consumer:latest
+    restart: unless-stopped
+    environment:
+      # RabbitMQ Configuration
+      - RABBITMQ_HOST=x.x.x.x
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=mkvmerge-consumer-user
+      - RABBITMQ_PASSWORD=mkvmerge-consumer-password
+      - RABBITMQ_VHOST=vhost-media-automation
+      # Queue names
+      - RABBITMQ_QUEUE_TASKS=mkvmerge.tasks
+      - RABBITMQ_QUEUE_DONE=mkvmerge.done
+      - RABBITMQ_QUEUE_DLQ=mkvmerge.tasks_DLQ
+      - PATHS_CATEGORIES='{"local-movies":"/mnt/movies","local-tvshows":"/mnt/tvshows"}'
+    volumes:
+      # Mount media volumes - adjust paths as needed for your environment
+      - /mnt/movies:/mnt/movies:rw
+      - /mnt/tvshows:/mnt/tvshows:rw
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

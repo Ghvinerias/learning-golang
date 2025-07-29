@@ -57,10 +57,7 @@
     │                                 │    │                                 │
     │ CATEGORY MAPPINGS:              │    │                                 │
     │ • local-movies  → /mnt/vault/   │    │                                 │
-    │ • local-tvshows → media/jello/  │    │                                 │
-    │ • nas-tvshows   → /mnt/vault-   │    │                                 │
-    │ • nas-movies    → media/        │    │                                 │
-    │                                 │    │                                 │
+    │ • local-tvshows → media/jello/  │    │                                 │    │                                 │    │                                 │
     │ ERROR HANDLING:                 │    │                                 │
     │ • JSON parsing errors → DLQ     │    │                                 │
     │ • Unknown categories → DLQ      │    │                                 │
@@ -87,8 +84,99 @@
 
                               SYSTEM FEATURES
                               ===============
+    • Configuration via godotenv and viper (environment variables and config files)
     • Dead Letter Queue (DLQ) support for failed messages
     • Graceful shutdown handling (SIGINT/SIGTERM)
     • Message persistence and durability
     • QoS settings for controlled processing
     • Comprehensive error logging
+
+## Configuration
+
+This service uses a combination of config files (YAML) and environment variables for configuration:
+
+### Configuration Methods (in order of precedence)
+
+1. **Environment Variables**: Highest precedence
+2. **`.env` File**: Loaded at startup if present
+3. **Configuration Files**: `config.yaml` in the following locations:
+   - Current directory (`./config.yaml`)
+   - Config directory (`./config/config.yaml`)
+   - System config directory (`/etc/mkvmerge-consumer/config.yaml`)
+4. **Default Values**: Used when no other configuration is provided
+
+### RabbitMQ Configuration
+
+```yaml
+# config.yaml
+rabbitmq:
+  host: "10.10.40.19"
+  port: "5672"
+  username: "mkvmerge-consumer"
+  password: "mkvmerge-consumer"
+  vhost: "media-automation"
+  queue:
+    tasks: "mkvmerge.tasks"
+    done: "mkvmerge.done"
+    dlq: "mkvmerge.tasks_DLQ"
+```
+
+**Corresponding Environment Variables:**
+```
+RABBITMQ_HOST=10.10.40.19
+RABBITMQ_PORT=5672
+RABBITMQ_USERNAME=mkvmerge-consumer
+RABBITMQ_PASSWORD=mkvmerge-consumer
+RABBITMQ_VHOST=media-automation
+RABBITMQ_QUEUE_TASKS=mkvmerge.tasks
+RABBITMQ_QUEUE_DONE=mkvmerge.done
+RABBITMQ_QUEUE_DLQ=mkvmerge.tasks_DLQ
+```
+
+### File Path Configuration
+
+```yaml
+# config.yaml
+paths:
+  categories:
+    local-movies: "/mnt/vault/media/jello/movies"
+    local-tvshows: "/mnt/vault/media/jello/tvshows"
+```
+
+**Corresponding Environment Variable:**
+```
+# JSON string format
+PATHS_CATEGORIES='{"local-movies":"/mnt/vault/media/jello/movies","local-tvshows":"/mnt/vault/media/jello/tvshows"}'
+```
+
+## Docker Usage
+
+### Docker Compose
+
+The easiest way to run this service is using Docker Compose:
+
+```bash
+# Start the service
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the service
+docker-compose down
+```
+
+### Manual Docker Build and Run
+
+```bash
+# Build the Docker image
+docker build -t mkvmerge-consumer .
+
+# Run the container
+docker run -d \
+  --name mkvmerge-consumer \
+  -v /mnt/vault/media:/mnt/vault/media:rw \
+  -v $(pwd)/config:/app/config:ro \
+  -e RABBITMQ_HOST=10.10.40.19 \
+  mkvmerge-consumer
+```

@@ -11,33 +11,24 @@ import (
 	"syscall"
 	"time"
 
+	"mkvmerge-consumer/config"
+
 	"github.com/streadway/amqp"
 )
 
-// RabbitMQ connection details (you may want to load these from environment variables)
-const (
-	rabbitmqHost     = "x.x.x.x"
-	rabbitmqPort     = "5672"
-	rabbitmqUsername = "mkvmerge-consumer"
-	rabbitmqPassword = "mkvmerge-consumer"
-	rabbitmqVhost    = "media-automation"
-	queueName        = "mkvmerge.tasks"     // Queue to consume from
-	doneQueueName    = "mkvmerge.done"      // Queue to publish to when done
-	dlqQueueName     = "mkvmerge.tasks_DLQ" // Dead Letter Queue for failed messages
+// Global configuration
+var (
+	cfg             *config.Config
+	queueName       string
+	doneQueueName   string
+	dlqQueueName    string
+	CategoryPathMap map[string]string
 )
 
 // Message represents the structure of incoming RabbitMQ messages
 type Message struct {
 	TorrentName string `json:"torrentName"`
 	Category    string `json:"category"`
-}
-
-// CategoryPathMap maps category names to their filesystem paths
-var CategoryPathMap = map[string]string{
-	"local-movies":  "/mnt/vault/media/jello/movies",
-	"local-tvshows": "/mnt/vault/media/jello/tvshows",
-	"nas-tvshows":   "/mnt/vault-media/tvshows",
-	"nas-movies":    "/mnt/vault-media/movies",
 }
 
 // failOnError logs and exits on error
@@ -263,10 +254,22 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	log.Println("Starting RabbitMQ consumer...")
 
+	// Load configuration
+	var err error
+	cfg, err = config.Load()
+	failOnError(err, "Failed to load configuration")
+
+	// Set global variables from config
+	queueName = cfg.RabbitMQ.Queue.Tasks
+	doneQueueName = cfg.RabbitMQ.Queue.Done
+	dlqQueueName = cfg.RabbitMQ.Queue.DLQ
+	CategoryPathMap = cfg.Paths.Categories
+
+	log.Printf("Configuration loaded: RabbitMQ host=%s, queues=%s,%s,%s",
+		cfg.RabbitMQ.Host, queueName, doneQueueName, dlqQueueName)
+
 	// Connect to RabbitMQ
-	connectionString := fmt.Sprintf("amqp://%s:%s@%s:%s/%s",
-		rabbitmqUsername, rabbitmqPassword, rabbitmqHost, rabbitmqPort, rabbitmqVhost)
-	conn, err := amqp.Dial(connectionString)
+	conn, err := amqp.Dial(cfg.ConnectionString())
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 	log.Println("Successfully connected to RabbitMQ")
