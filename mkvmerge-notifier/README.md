@@ -66,6 +66,6 @@ The application expects messages in the following JSON format:
 {
   "filename": "/path/to/your/file.mkv",
   "status": "Complete",
-  "time": "2023-07-29T15:04:05Z"
+  "time": "2023-07-29T15:04:07Z"
 }
 ```

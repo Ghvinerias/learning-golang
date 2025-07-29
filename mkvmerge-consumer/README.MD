@@ -4,7 +4,7 @@
 ┌─────────────────┐    ┌───────────────────────────────────────────────────┐
 │   External      │    │                RabbitMQ Server                    │
 │   Message       │───▶│                x.x.x.x:5672                       │
-│   Producer      │    │         vhost: media-automation                   │
+│   Producer      │    │         vhost: vhost-media-automation             │
 └─────────────────┘    └───────────────────────────────────────────────────┘
                                               │
                                               ▼

@@ -3,7 +3,7 @@
 A Telegram bot that downloads torrent files from Kinozal and adds them to qBittorrent with specified categories.
 
 ## Features
-
+ 
 - Download torrents from Kinozal with proper authentication
 - Add torrents to qBittorrent with specific categories
 - Support for movies and TV shows categories
