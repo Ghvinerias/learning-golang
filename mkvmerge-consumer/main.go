@@ -16,7 +16,7 @@ import (
 
 // RabbitMQ connection details (you may want to load these from environment variables)
 const (
-	rabbitmqHost     = "10.10.40.19"
+	rabbitmqHost     = "x.x.x.x"
 	rabbitmqPort     = "5672"
 	rabbitmqUsername = "mkvmerge-consumer"
 	rabbitmqPassword = "mkvmerge-consumer"
