@@ -80,7 +80,7 @@ jobs:
           args: -no-fail -fmt=json -out=results.json ./...
 
       - name: Upload security scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.json
           category: gosec
