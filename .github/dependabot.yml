@@ -129,7 +129,7 @@ updates:
       prefix: "deps(jenkins)"
       include: "scope"
 
-  # Add Docker support for telegram-torrent-bot
+  # Docker support for telegram-torrent-bot
   - package-ecosystem: "docker"
     directory: "/telegram-torrent-bot"
     schedule:
@@ -138,8 +138,37 @@ updates:
     labels:
       - "docker"
       - "dependencies"
+      - "telegram-torrent-bot"
     commit-message:
-      prefix: "docker"
+      prefix: "docker(telegram)"
+      include: "scope"
+      
+  # Docker support for mkvmerge-consumer
+  - package-ecosystem: "docker"
+    directory: "/mkvmerge-consumer"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "docker"
+      - "dependencies"
+      - "mkvmerge-consumer"
+    commit-message:
+      prefix: "docker(mkvmerge)"
+      include: "scope"
+      
+  # Docker support for mkvmerge-notifier
+  - package-ecosystem: "docker"
+    directory: "/mkvmerge-notifier"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "docker"
+      - "dependencies" 
+      - "mkvmerge-notifier"
+    commit-message:
+      prefix: "docker(notifier)"
       include: "scope"
 
   # GitHub Actions workflows
