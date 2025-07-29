@@ -1,0 +1,32 @@
+# Build artifacts
+telegram-torrent-bot
+__debug_bin
+
+# Environment files
+.env
+
+# Temporary files
+movie.torrent
+*.torrent
+*.html
+tmp/
+qbittorrent/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Go specific
+*.o
+*.a
+*.so
+/_obj
+/_test
+/vendor/
+/Godeps/

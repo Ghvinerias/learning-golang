@@ -1,0 +1,18 @@
+services:
+  telegram-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telegram-torrent-bot
+    restart: unless-stopped
+    volumes:
+      - ./tmp:/tmp/torrents
+    environment:
+      - TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+      - KINOZAL_LOGIN_URL=https://kinozal.guru/login.php
+      - QBITTORRENT_URL=http://qbittorrent:8080
+      - QBITTORRENT_USER=admin
+      - QBITTORRENT_PASS=adminadmin
+      - KINOZAL_USER=your_kinozal_username
+      - KINOZAL_PASS=your_kinozal_password
+      - TORRENT_TEMP_FILE=/tmp/torrents/temp.torrent
