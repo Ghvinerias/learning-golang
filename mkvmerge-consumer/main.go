@@ -40,7 +40,7 @@ func failOnError(err error, msg string) {
 }
 
 // ensureQueueExists creates a queue if it does not already exist
-func ensureQueueExists(ch *amqp.Channel, qName string) amqp.Queue {
+func ensureQueueExists(ch ChannelInterface, qName string) amqp.Queue {
 	q, err := ch.QueueDeclare(
 		qName, // name
 		true,  // durable
@@ -55,7 +55,7 @@ func ensureQueueExists(ch *amqp.Channel, qName string) amqp.Queue {
 }
 
 // ensureMainQueueWithDLX creates the main processing queue with Dead Letter Exchange configuration
-func ensureMainQueueWithDLX(ch *amqp.Channel) amqp.Queue {
+func ensureMainQueueWithDLX(ch ChannelInterface) amqp.Queue {
 	// First, declare the DLX exchange
 	err := ch.ExchangeDeclare(
 		"dlx",    // name
@@ -179,7 +179,7 @@ func publishDoneMessage(ch ChannelInterface, filename string) error {
 }
 
 // publishToDLQ publishes a message to the Dead Letter Queue with an error reason
-func publishToDLQ(ch *amqp.Channel, body []byte, reason string) error {
+func publishToDLQ(ch ChannelInterface, body []byte, reason string) error {
 	// Create a wrapper message with the original message and error reason
 	dlqMessage := map[string]interface{}{
 		"originalMessage": string(body),
@@ -217,7 +217,9 @@ func publishToDLQ(ch *amqp.Channel, body []byte, reason string) error {
 }
 
 // rejectMessageToDLQ rejects a message and routes it to the DLQ automatically
-func rejectMessageToDLQ(d amqp.Delivery, reason string) error {
+func rejectMessageToDLQ(d interface {
+	Reject(bool) error
+}, reason string) error {
 	log.Printf("Rejecting message to DLQ with reason: %s", reason)
 
 	// Reject the message with requeue=false, which will send it to DLX
@@ -407,8 +409,21 @@ func main() {
 	log.Println("Consumer shutdown complete")
 }
 
+// Define variable aliases for functions to make them mockable in tests
+var (
+	statFunc    = os.Stat
+	walkFunc    = filepath.Walk
+	renameFunc  = os.Rename
+	removeFunc  = os.Remove
+	execCommand = exec.Command
+)
+
 // processMessage handles the received message
-func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
+func processMessage(ch ChannelInterface, d interface {
+	Ack(bool) error
+	Nack(bool, bool) error
+	Reject(bool) error
+}, body []byte) {
 	log.Printf("Processing message: %s", body)
 
 	// Parse the JSON message
@@ -439,7 +454,7 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 	log.Printf("Looking for MKV files in: %s", folderPath)
 
 	// Check if the folder exists
-	if _, err := os.Stat(folderPath); os.IsNotExist(err) {
+	if _, err := statFunc(folderPath); os.IsNotExist(err) {
 		log.Printf("Folder does not exist: %s", folderPath)
 		// Reject message to DLQ for non-existent folder
 		reason := fmt.Sprintf("Folder does not exist: %s", folderPath)
@@ -451,7 +466,7 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 
 	// Find all .mkv files in the folder
 	var mkvFiles []string
-	err := filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
+	err := walkFunc(folderPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -486,7 +501,7 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 		log.Printf("Processing file: %s", file)
 
 		// Get track information using mkvmerge
-		jsonCmd := exec.Command("mkvmerge", "-J", file)
+		jsonCmd := execCommand("mkvmerge", "-J", file)
 		jsonOutput, err := jsonCmd.Output()
 		if err != nil {
 			log.Printf("Error getting track info for %s: %v", file, err)
@@ -573,7 +588,7 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 
 		// Run mkvmerge
 		log.Printf("Running mkvmerge with args: %v", args)
-		cmd := exec.Command("mkvmerge", args...)
+		cmd := execCommand("mkvmerge", args...)
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
@@ -585,7 +600,7 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 				log.Printf("Error running mkvmerge for %s: %v", file, err)
 				log.Printf("Output: %s", string(output))
 				// Clean up temporary file
-				os.Remove(tmpFile)
+				removeFunc(tmpFile)
 				continue
 			}
 		} else {
@@ -593,9 +608,9 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 		}
 
 		// Replace original file with new file
-		if err := os.Rename(tmpFile, file); err != nil {
+		if err := renameFunc(tmpFile, file); err != nil {
 			log.Printf("Error replacing original file %s: %v", file, err)
-			os.Remove(tmpFile) // Clean up in case of error
+			removeFunc(tmpFile) // Clean up in case of error
 		} else {
 			log.Printf("Successfully processed %s", file)
 			// Mark that at least one file was successfully processed

@@ -23,7 +23,7 @@ GOARCH := GOARCH=amd64
 .SILENT:
 
 # Declare phony targets
-.PHONY: all clean build build-win build-linux test tidy help
+.PHONY: all clean build build-win build-linux test test-coverage test-coverage-html tidy help
 
 # Default target
 all: clean build
@@ -58,6 +58,20 @@ test:
 	$(GO) test -v ./...
 	@echo "Tests complete"
 
+# Run tests with coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	$(GO) test -cover -v ./...
+	@echo "Coverage tests complete"
+
+# Run tests with coverage and generate HTML report
+test-coverage-html:
+	@echo "Generating coverage report..."
+	$(GO) test -coverprofile=coverage.out ./...
+	$(GO) tool cover -html=coverage.out -o coverage.html
+	rm coverage.out
+	@echo "Coverage report generated: coverage.html"
+
 # Tidy dependencies
 tidy:
 	@echo "Tidying dependencies..."
@@ -75,3 +89,5 @@ help:
 	@echo "  test       - Run tests"
 	@echo "  tidy       - Tidy Go module dependencies"
 	@echo "  help       - Display this help message"
+	@echo "  test-coverage - Run tests with coverage summary"
+	@echo "  test-coverage-html - Generate HTML coverage report"

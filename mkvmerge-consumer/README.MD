@@ -149,6 +149,21 @@ paths:
 PATHS_CATEGORIES='{"local-movies":"/mnt/vault/media/jello/movies","local-tvshows":"/mnt/vault/media/jello/tvshows"}'
 ```
 
+## Testing
+
+This project includes comprehensive unit tests that can be run with:
+
+```bash
+# Run all tests
+make test
+
+# Run tests with coverage information
+make test-coverage
+
+# Generate HTML coverage report
+make test-coverage-html
+```
+
 ## Docker Usage
 
 ### Docker Compose
