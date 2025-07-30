@@ -140,11 +140,26 @@ func ensureMainQueueWithDLX(conn *amqp.Connection) (amqp.Queue, *amqp.Channel) {
 // isInequivalentArgError checks if the error is due to inequivalent arguments
 func isInequivalentArgError(err error) bool {
 	if amqpErr, ok := err.(*amqp.Error); ok {
-		return amqpErr.Code == 406 &&
-			(amqpErr.Reason == "PRECONDITION_FAILED" ||
-				amqpErr.Reason != "" &&
-					(amqpErr.Reason[:len("PRECONDITION_FAILED")] == "PRECONDITION_FAILED" ||
-						amqpErr.Reason[:len("inequivalent arg")] == "inequivalent arg"))
+		if amqpErr.Code == 406 {
+			// Check for PRECONDITION_FAILED
+			if amqpErr.Reason == "PRECONDITION_FAILED" {
+				return true
+			}
+
+			// Check for prefix "PRECONDITION_FAILED"
+			preconditionLen := len("PRECONDITION_FAILED")
+			if len(amqpErr.Reason) >= preconditionLen &&
+				amqpErr.Reason[:preconditionLen] == "PRECONDITION_FAILED" {
+				return true
+			}
+
+			// Check for prefix "inequivalent arg"
+			inequivLen := len("inequivalent arg")
+			if len(amqpErr.Reason) >= inequivLen &&
+				amqpErr.Reason[:inequivLen] == "inequivalent arg" {
+				return true
+			}
+		}
 	}
 	return false
 }
@@ -159,31 +174,28 @@ func publishToDLQ(ch *amqp.Channel, body []byte, reason string) error {
 	}
 
 	// Convert to JSON
-	dlqBody, err := json.Marshal(dlqMessage)
+	dlqJSON, err := json.Marshal(dlqMessage)
 	if err != nil {
 		return fmt.Errorf("failed to marshal DLQ message: %v", err)
 	}
 
-	// Ensure DLQ exists
-	_ = ensureQueueExists(ch, dlqQueueName)
-
-	// Publish to the DLQ
-	err = ch.Publish(
+	// Publish to DLQ
+	err = amqpPublish(
+		ch,           // channel
 		"",           // exchange
 		dlqQueueName, // routing key
 		false,        // mandatory
 		false,        // immediate
 		amqp.Publishing{
-			ContentType:  "application/json",
-			Body:         dlqBody,
-			DeliveryMode: amqp.Persistent, // make message persistent
-		})
-
+			ContentType: "application/json",
+			Body:        dlqJSON,
+		},
+	)
 	if err != nil {
-		return fmt.Errorf("failed to publish to DLQ: %v", err)
+		return fmt.Errorf("failed to publish message to DLQ: %v", err)
 	}
 
-	log.Printf("Published message to DLQ %s with reason: %s", dlqQueueName, reason)
+	log.Printf("Published message to DLQ with reason: %s", reason)
 	return nil
 }
 
