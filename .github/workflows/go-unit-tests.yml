@@ -1,5 +1,10 @@
 name: Go Unit Tests
 
+permissions:
+  contents: read
+  actions: read
+  secrets: read
+
 on:
   push:
     branches: [ main, master ]
