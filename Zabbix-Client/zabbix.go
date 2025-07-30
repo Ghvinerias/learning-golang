@@ -13,8 +13,9 @@ func zabbixAPICall(request ZabbixRequest, response *ZabbixResponse) error {
 		return fmt.Errorf("failed to marshal request: %v", err)
 	}
 
-	// Print the full JSON request being sent
-	fmt.Println("Zabbix API Request:", string(reqBody))
+	// Print a sanitized version of the JSON request being sent
+	sanitizedReqBody := bytes.Replace(reqBody, []byte(apiKey), []byte("[REDACTED]"), -1)
+	fmt.Println("Zabbix API Request (sanitized):", string(sanitizedReqBody))
 
 	resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
