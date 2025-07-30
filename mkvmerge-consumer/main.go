@@ -495,6 +495,9 @@ func processMessage(ch ChannelInterface, d interface {
 
 	// Track successful file processing
 	successfullyProcessed := false
+	// Track files skipped because they already have only English audio tracks
+	skippedDueToOnlyEnglishAudio := true // Start with true, set to false if any file doesn't meet the criteria
+	filesProcessed := 0                  // Count of files processed or skipped
 
 	// Process each MKV file
 	for _, file := range mkvFiles {
@@ -535,7 +538,11 @@ func processMessage(ch ChannelInterface, d interface {
 
 		if !hasNonEnglishAudio {
 			log.Printf("File %s already has only English audio tracks, skipping", file)
+			filesProcessed++
 			continue
+		} else {
+			// If any file has non-English audio, set flag to false
+			skippedDueToOnlyEnglishAudio = false
 		}
 
 		// Build track selection arguments
@@ -615,12 +622,14 @@ func processMessage(ch ChannelInterface, d interface {
 			log.Printf("Successfully processed %s", file)
 			// Mark that at least one file was successfully processed
 			successfullyProcessed = true
+			filesProcessed++
 		}
 	}
 
-	// If at least one file was processed successfully, acknowledge the original message
+	// If at least one file was processed successfully or all files were skipped because they
+	// already have only English audio tracks, acknowledge the original message
 	// and send a completion message for the whole directory
-	if successfullyProcessed {
+	if successfullyProcessed || (skippedDueToOnlyEnglishAudio && filesProcessed == len(mkvFiles)) {
 		// Send a single message to the done queue with the torrent name
 		if err := publishDoneMessage(ch, msg.TorrentName); err != nil {
 			log.Printf("Error publishing done message for torrent %s: %v", msg.TorrentName, err)
@@ -631,7 +640,11 @@ func processMessage(ch ChannelInterface, d interface {
 		if err := d.Ack(false); err != nil {
 			log.Printf("Error acknowledging message: %v", err)
 		} else {
-			log.Println("Message acknowledged after successful processing")
+			if successfullyProcessed {
+				log.Println("Message acknowledged after successful processing")
+			} else {
+				log.Println("Message acknowledged because files already have only English audio tracks")
+			}
 		}
 	} else {
 		log.Println("No files were successfully processed, message remains in queue")
