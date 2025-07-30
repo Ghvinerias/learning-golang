@@ -1,0 +1,68 @@
+name: Go Unit Tests
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'mkvmerge-consumer/**'
+      - 'mkvmerge-notifier/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'mkvmerge-consumer/**'
+      - 'mkvmerge-notifier/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: ['mkvmerge-consumer', 'mkvmerge-notifier']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Install dependencies
+        run: |
+          cd ${{ matrix.project }}
+          go mod download
+      
+      - name: Run tests
+        run: |
+          cd ${{ matrix.project }}
+          go test -v -coverprofile=coverage.out ./...
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./${{ matrix.project }}/coverage.out
+          flags: ${{ matrix.project }}
+          name: ${{ matrix.project }}-coverage
+          fail_ci_if_error: false
+
+  notify:
+    needs: [test]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            🧪 Go Unit Tests: ${{ needs.test.result == 'success' && '✅ Success' || '❌ Failed' }}
+            
+            Projects tested:
+            - mkvmerge-consumer
+            - mkvmerge-notifier
+            
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.event.after || github.event.pull_request.head.sha }}
+            Triggered by: ${{ github.actor }}

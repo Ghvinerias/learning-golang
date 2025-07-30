@@ -35,7 +35,7 @@ jobs:
           
           # Check each project directory for changes
           for dir in */; do
-            if [ -f "${dir}go.mod" ] && grep -q "^${dir}go\\.mod$\\|^${dir}go\\.sum$\\|^${dir}.*\\.go$" changed_files.txt; then
+            if [ -f "${dir}go.mod" ] && grep -q "^${dir}go\\.mod$\\|^${dir}go\\.sum$\\|^${dir}.*\\.go$\\|^${dir}config/.*\\.go$" changed_files.txt; then
               PROJECTS+=("${dir}")
             fi
           done
@@ -56,8 +56,8 @@ jobs:
               continue
             fi
             
-            # Run tests
-            go test -v ./...
+            # Run tests including config subdirectory
+            go test -v ./... -coverprofile=coverage.out
             
             # Return to workspace root
             cd "$GITHUB_WORKSPACE"
@@ -112,7 +112,7 @@ jobs:
           
           # Check each project directory for changes
           for dir in */; do
-            if [ -f "${dir}go.mod" ] && grep -q "^${dir}go\\.mod$\\|^${dir}go\\.sum$\\|^${dir}.*\\.go$" changed_files.txt; then
+            if [ -f "${dir}go.mod" ] && grep -q "^${dir}go\\.mod$\\|^${dir}go\\.sum$\\|^${dir}.*\\.go$\\|^${dir}config/.*\\.go$" changed_files.txt; then
               PROJECTS+=("${dir}")
             fi
           done

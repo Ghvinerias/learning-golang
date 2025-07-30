@@ -67,10 +67,9 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       
-      # Commented out tests as they are not supported currently
-      # - name: Run tests
-      #   working-directory: ./${{ matrix.project }}
-      #   run: go test -v ./...
+      - name: Run tests
+        working-directory: ./${{ matrix.project }}
+        run: go test -v ./...
 
       - name: Extract metadata for Docker
         id: meta
