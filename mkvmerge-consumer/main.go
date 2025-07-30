@@ -598,18 +598,21 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery, body []byte) {
 			os.Remove(tmpFile) // Clean up in case of error
 		} else {
 			log.Printf("Successfully processed %s", file)
-			// Publish a message to the done queue
-			if err := publishDoneMessage(ch, file); err != nil {
-				log.Printf("Error publishing done message for %s: %v", file, err)
-			} else {
-				// Mark that at least one file was successfully processed
-				successfullyProcessed = true
-			}
+			// Mark that at least one file was successfully processed
+			successfullyProcessed = true
 		}
 	}
 
 	// If at least one file was processed successfully, acknowledge the original message
+	// and send a completion message for the whole directory
 	if successfullyProcessed {
+		// Send a single message to the done queue with the torrent name
+		if err := publishDoneMessage(ch, msg.TorrentName); err != nil {
+			log.Printf("Error publishing done message for torrent %s: %v", msg.TorrentName, err)
+		} else {
+			log.Printf("Published completion message for entire directory: %s", msg.TorrentName)
+		}
+
 		if err := d.Ack(false); err != nil {
 			log.Printf("Error acknowledging message: %v", err)
 		} else {
