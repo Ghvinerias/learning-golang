@@ -28,7 +28,7 @@ func main() {
 
     // Use the secret (e.g., API key)
     apiKey := secret.Data // Assuming Data contains the API key
-    fmt.Printf("API Key retrieved: %s\n", apiKey)
+    fmt.Println("API Key successfully retrieved.")
 
     // Use the API key to make a request to the OpenWeather API
     // e.g., makeRequestToOpenWeather(apiKey)
