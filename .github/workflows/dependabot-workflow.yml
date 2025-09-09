@@ -16,52 +16,67 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Need full history for git diff between base and head
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.21'
+          go-version: '1.25'
 
       - name: Determine affected projects
         id: affected-projects
         run: |
-          PROJECTS=()
-          
-          # Check if files were changed in specific project directories
-          git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > changed_files.txt
-          
-          # Check root directory for changes
-          if grep -q "^go\\.mod$\\|^go\\.sum$\\|^\\w.*\\.go$" changed_files.txt; then
-            PROJECTS+=(".")
-          fi
-          
-          # Check each project directory for changes
-          for dir in */; do
-            if [ -f "${dir}go.mod" ] && grep -q "^${dir}go\\.mod$\\|^${dir}go\\.sum$\\|^${dir}.*\\.go$\\|^${dir}config/.*\\.go$" changed_files.txt; then
-              PROJECTS+=("${dir}")
+          set -euo pipefail
+          BASE_SHA='${{ github.event.pull_request.base.sha }}'
+          HEAD_SHA='${{ github.event.pull_request.head.sha }}'
+          echo "Base: $BASE_SHA Head: $HEAD_SHA"
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
+          echo "Changed files:"; cat changed_files.txt || true
+
+          declare -A PROJECT_SET=()
+
+          while IFS= read -r file; do
+            # Skip empty lines
+            [ -z "$file" ] && continue
+            # Root module (only if go.mod exists at root – currently it does not, so skip automatically)
+            if [ "$file" = "go.mod" ] || [ "$file" = "go.sum" ] || [[ "$file" == *.go ]]; then
+              if [ -f go.mod ]; then
+                PROJECT_SET[.]="1"
+              fi
             fi
-          done
-          
+            # Handle nested modules
+            if [[ "$file" == */* ]]; then
+              top_dir="${file%%/*}"
+              if [ -f "$top_dir/go.mod" ]; then
+                PROJECT_SET[$top_dir]="1"
+              fi
+            fi
+          done < changed_files.txt
+
+          PROJECTS=("${!PROJECT_SET[@]}")
+          # Ensure stable ordering
+          IFS=$'\n' PROJECTS=($(sort <<<"${PROJECTS[*]}") ); unset IFS
+
+          if [ ${#PROJECTS[@]} -eq 0 ]; then
+            echo "No Go module changes detected; nothing to test.";
+          fi
+
           echo "Projects to test: ${PROJECTS[*]}"
-          echo "::set-output name=projects::${PROJECTS[*]}"
+          echo "projects=${PROJECTS[*]}" >> "$GITHUB_OUTPUT"
       
       - name: Run tests for affected projects
         run: |
-          IFS=' ' read -r -a PROJECTS <<< "${{ steps.affected-projects.outputs.projects }}"
+          set -euo pipefail
+          PROJECTS=( ${{ steps.affected-projects.outputs.projects }} )
+          if [ ${#PROJECTS[@]} -eq 0 ]; then
+            echo "No affected projects to test. Skipping."; exit 0; fi
           for project in "${PROJECTS[@]}"; do
             echo "Testing project: $project"
             cd "$GITHUB_WORKSPACE/$project"
-            
-            # Skip if no tests are found
             if ! find . -name "*_test.go" -type f | grep -q .; then
-              echo "No tests found for $project, skipping."
-              continue
-            fi
-            
-            # Run tests including config subdirectory
+              echo "No tests found for $project, skipping."; cd "$GITHUB_WORKSPACE"; continue; fi
             go test -v ./... -coverprofile=coverage.out
-            
-            # Return to workspace root
             cd "$GITHUB_WORKSPACE"
           done
 
@@ -72,11 +87,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.21'
+          go-version: '1.25'
 
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
@@ -97,50 +114,50 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.21'
+          go-version: '1.25'
 
       - name: Determine affected projects
         id: affected-projects
         run: |
-          PROJECTS=()
-          
-          # Check if files were changed in specific project directories
-          git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > changed_files.txt
-          
-          # Check root directory for changes
-          if grep -q "^go\\.mod$\\|^go\\.sum$\\|^\\w.*\\.go$" changed_files.txt; then
-            PROJECTS+=(".")
-          fi
-          
-          # Check each project directory for changes
-          for dir in */; do
-            if [ -f "${dir}go.mod" ] && grep -q "^${dir}go\\.mod$\\|^${dir}go\\.sum$\\|^${dir}.*\\.go$\\|^${dir}config/.*\\.go$" changed_files.txt; then
-              PROJECTS+=("${dir}")
+          set -euo pipefail
+          BASE_SHA='${{ github.event.pull_request.base.sha }}'
+          HEAD_SHA='${{ github.event.pull_request.head.sha }}'
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
+          declare -A PROJECT_SET=()
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            if [ "$file" = "go.mod" ] || [ "$file" = "go.sum" ] || [[ "$file" == *.go ]]; then
+              if [ -f go.mod ]; then PROJECT_SET[.]="1"; fi
             fi
-          done
-          
+            if [[ "$file" == */* ]]; then
+              top_dir="${file%%/*}"
+              if [ -f "$top_dir/go.mod" ]; then PROJECT_SET[$top_dir]="1"; fi
+            fi
+          done < changed_files.txt
+          PROJECTS=("${!PROJECT_SET[@]}")
+          IFS=$'\n' PROJECTS=($(sort <<<"${PROJECTS[*]}") ); unset IFS
           echo "Projects to build: ${PROJECTS[*]}"
-          echo "::set-output name=projects::${PROJECTS[*]}"
+          echo "projects=${PROJECTS[*]}" >> "$GITHUB_OUTPUT"
 
       - name: Build affected projects
         run: |
-          IFS=' ' read -r -a PROJECTS <<< "${{ steps.affected-projects.outputs.projects }}"
+          set -euo pipefail
+          PROJECTS=( ${{ steps.affected-projects.outputs.projects }} )
+          if [ ${#PROJECTS[@]} -eq 0 ]; then echo "No affected projects to build. Skipping."; exit 0; fi
           for project in "${PROJECTS[@]}"; do
             echo "Building project: $project"
             cd "$GITHUB_WORKSPACE/$project"
-            
-            # Check if main.go exists before trying to build
             if [ -f "main.go" ]; then
               go build -v .
             else
               echo "No main.go found for $project, skipping build."
             fi
-            
-            # Return to workspace root
             cd "$GITHUB_WORKSPACE"
           done
 
