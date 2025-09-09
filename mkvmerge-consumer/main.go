@@ -49,7 +49,7 @@ func ensureQueueExists(ch ChannelInterface, qName string) amqp.Queue {
 		false, // no-wait
 		nil,   // arguments
 	)
-	failOnError(err, fmt.Sprintf("Failed to declare queue '%s'", qName))
+	failOnError(err, fmt.Sprintf("Failed to declare queue?! '%s'", qName))
 	log.Printf("Queue '%s' declared", qName)
 	return q
 }
