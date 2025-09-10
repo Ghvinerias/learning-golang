@@ -30,6 +30,16 @@ type MatrixEntry struct {
 	NodeVersions  []string `yaml:"nodeVersions"`
 	PackageManager string  `yaml:"packageManager"`
 	BuildScripts  []string `yaml:"buildScripts"`
+	Docker        *DockerConfig `yaml:"docker,omitempty"`
+}
+
+type DockerConfig struct {
+	Enabled    bool     `yaml:"enabled"`
+	Repository string   `yaml:"repository"`
+	Tags       []string `yaml:"tags"`
+	Push       bool     `yaml:"push"`
+	Registries []string `yaml:"registries"`
+	Dockerfile string   `yaml:"dockerfile"`
 }
 
 type DefaultSection struct {

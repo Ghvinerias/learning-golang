@@ -7,9 +7,11 @@ A Go CLI tool for reproducibly building multiple .NET and Node.js projects with 
 - ✅ **Multi-runtime builds**: Support for .NET (6.0, 8.0+) and Node.js (18+, 20+) projects
 - ✅ **Matrix builds**: Build projects against multiple framework/runtime versions  
 - ✅ **Docker isolation**: Uses Docker images for consistent, clean builds
+- ✅ **Docker image packaging**: Build and push Docker images to registries
 - ✅ **Caching system**: Hash-based artifact caching to avoid redundant builds
 - ✅ **Concurrent builds**: Configurable concurrency with worker pools
 - ✅ **Project detection**: Auto-detect project types from files (*.csproj, package.json)
+- ✅ **Registry support**: Push to Docker Hub, GitHub Container Registry, AWS ECR, Azure CR
 - ✅ **Structured logging**: JSON or human-readable output
 - ✅ **Build artifacts**: Versioned outputs with manifest.json metadata
 
@@ -56,6 +58,70 @@ defaults:
   artifactDir: dist
 ```
 
+## Docker Image Packaging
+
+Slick AutoBuild can build and push Docker images to popular registries after successful builds.
+
+### Configuration
+
+Add Docker configuration to your matrix entries:
+
+```yaml
+matrix:
+  - path: services/api
+    type: dotnet
+    frameworks:
+      - 8.0.100
+    docker:
+      enabled: true
+      repository: "myorg/api"
+      tags: ["latest", "v1.0.0", "stable"]
+      push: true
+      registries: ["docker.io", "ghcr.io"]
+      dockerfile: "Dockerfile"  # Optional, defaults to "Dockerfile"
+```
+
+### Supported Registries
+
+- **Docker Hub**: `docker.io` (default)
+- **GitHub Container Registry**: `ghcr.io`
+- **AWS Elastic Container Registry**: `123456789.dkr.ecr.us-west-2.amazonaws.com`
+- **Azure Container Registry**: `myregistry.azurecr.io`
+- **Google Container Registry**: `gcr.io`
+
+### Authentication
+
+Set environment variables for registry authentication:
+
+```bash
+# Docker Hub
+export DOCKER_USERNAME=myusername
+export DOCKER_PASSWORD=mypassword
+
+# GitHub Container Registry  
+export GITHUB_ACTOR=myusername
+export GITHUB_TOKEN=ghp_token
+
+# AWS ECR (requires AWS CLI configured)
+aws configure
+
+# Generic registries
+export MYREGISTRY_AZURECR_IO_USERNAME=myusername
+export MYREGISTRY_AZURECR_IO_PASSWORD=mypassword
+```
+
+### Docker Build Process
+
+1. After successful project build, check if Docker is enabled
+2. Look for Dockerfile in project directory
+3. Build Docker image with specified tags
+4. Push to configured registries (if push: true)
+
+### CLI Options for Docker
+
+- `--no-docker` - Disable Docker image building
+- `--push-images` - Force push images (overrides config push: false)
+
 2. Plan your builds:
 
 ```bash
@@ -84,6 +150,8 @@ defaults:
 - `--no-cache` - Disable build cache
 - `--only path1,path2` - Build only specific projects
 - `--dry-run` - Plan only, don't execute
+- `--no-docker` - Disable Docker image building
+- `--push-images` - Force push Docker images (overrides config)
 
 ## Project Detection
 

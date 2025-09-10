@@ -15,6 +15,7 @@ import (
 	"slick-autobuild/internal/artifact"
 	"slick-autobuild/internal/cache"
 	"slick-autobuild/internal/config"
+	"slick-autobuild/internal/docker"
 	"slick-autobuild/internal/logging"
 	"slick-autobuild/internal/planner"
 	"slick-autobuild/internal/runner"
@@ -28,6 +29,8 @@ var (
 	flagOnly        = flag.String("only", "", "Comma separated project paths to include")
 	flagDryRun      = flag.Bool("dry-run", false, "Plan only; do not execute builds")
 	flagVersion     = flag.Bool("version", false, "Print version and exit")
+	flagNoDocker    = flag.Bool("no-docker", false, "Disable Docker image building")
+	flagPushImages  = flag.Bool("push-images", false, "Force push Docker images (overrides config)")
 )
 
 // Error exit codes as defined in MVP
@@ -114,8 +117,47 @@ func runBuild() error {
 	logger.Info("starting builds", map[string]interface{}{"tasks": len(plan.Tasks), "concurrency": conc})
 
 	workspaceRoot, _ := os.Getwd()
-
 	ctx := context.Background()
+
+	// Check if Docker is available for projects that need it (only if not disabled)
+	if !*flagNoDocker {
+		hasDockerProjects := false
+		registriesToLogin := make(map[string]bool)
+		
+		for _, task := range plan.Tasks {
+			for _, me := range cfg.Matrix {
+				if me.Path == task.Path && me.Type == task.Kind && me.Docker != nil && me.Docker.Enabled {
+					hasDockerProjects = true
+					// Collect unique registries for login
+					registries := me.Docker.Registries
+					if len(registries) == 0 {
+						registriesToLogin["docker.io"] = true
+					} else {
+						for _, reg := range registries {
+							registriesToLogin[reg] = true
+						}
+					}
+				}
+			}
+		}
+		
+		if hasDockerProjects {
+			if err := docker.CheckDockerAvailable(ctx); err != nil {
+				return fmt.Errorf("Docker is required but not available: %w", err)
+			}
+			
+			// Login to registries if credentials are available
+			for registry := range registriesToLogin {
+				if err := docker.LoginToRegistry(ctx, registry, logger); err != nil {
+					logger.Warn("failed to login to registry", map[string]interface{}{
+						"registry": registry,
+						"error": err,
+					})
+				}
+			}
+		}
+	}
+
 	sem := make(chan struct{}, conc)
 	errCh := make(chan error, len(plan.Tasks))
 	for _, t := range plan.Tasks {
@@ -147,13 +189,15 @@ func runBuild() error {
 			} else {
 				logger.Info("build start", map[string]interface{}{"path": task.Path, "kind": task.Kind, "version": task.Version, "key": cacheKey})
 
-				// Find matrix entry for extra fields (package manager, build scripts)
+				// Find matrix entry for extra fields (package manager, build scripts, docker config)
 				var pkgMgr string
 				var scripts []string
+				var dockerCfg *config.DockerConfig
 				for _, me := range cfg.Matrix {
 					if me.Path == task.Path && me.Type == task.Kind {
 						pkgMgr = me.PackageManager
 						scripts = me.BuildScripts
+						dockerCfg = me.Docker
 						break
 					}
 				}
@@ -163,6 +207,21 @@ func runBuild() error {
 					logger.Error("build failed", map[string]interface{}{"path": task.Path, "error": runErr})
 					errCh <- runErr
 					return
+				}
+				
+				// Build Docker image if enabled and not disabled by flag
+				if !*flagNoDocker && dockerCfg != nil && dockerCfg.Enabled {
+					// Override push setting if flag is provided
+					if *flagPushImages {
+						dockerCfg.Push = true
+					}
+					
+					imageBuilder := docker.NewImageBuilder(logger)
+					if err := imageBuilder.BuildAndPush(ctx, task.Path, dockerCfg, workspaceRoot); err != nil {
+						logger.Error("Docker image build/push failed", map[string]interface{}{"path": task.Path, "error": err})
+						// Don't fail the entire build for Docker failures, just log warning
+						logger.Warn("continuing with build despite Docker failure", map[string]interface{}{"path": task.Path})
+					}
 				}
 				
 				// Store in cache if not disabled

@@ -38,5 +38,6 @@ func (l *Logger) log(level, msg string, kv map[string]interface{}) {
 }
 
 func (l *Logger) Info(msg string, kv map[string]interface{})  { l.log("INFO", msg, kv) }
+func (l *Logger) Warn(msg string, kv map[string]interface{})  { l.log("WARN", msg, kv) }
 func (l *Logger) Error(msg string, kv map[string]interface{}) { l.log("ERROR", msg, kv) }
 func (l *Logger) Debug(msg string, kv map[string]interface{}) { l.log("DEBUG", msg, kv) }
