@@ -22,7 +22,7 @@ type Manifest struct {
 
 // WriteManifest writes a manifest.json into the given output directory.
 func WriteManifest(outDir string, m Manifest) error {
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
+	if err := os.MkdirAll(outDir, 0o750); err != nil {
 		return err
 	}
 	m.CreatedAt = time.Now().UTC().Format(time.RFC3339Nano)
@@ -31,7 +31,7 @@ func WriteManifest(outDir string, m Manifest) error {
 		return err
 	}
 	path := filepath.Join(outDir, "manifest.json")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
 	return nil

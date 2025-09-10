@@ -1,10 +1,10 @@
 # Golang Project Makefile
 # -----------------
-# Project: template
-# Date: June 30, 2025
+# Project: slick-autobuild  
+# Date: August 2025
 
 # Binary name
-BINARY_NAME := template
+BINARY_NAME := slick-autobuild
 WINDOWS_BINARY := $(BINARY_NAME).exe
 LINUX_BINARY := $(BINARY_NAME)
 
@@ -74,4 +74,5 @@ help:
 	@echo "  clean      - Remove build artifacts"
 	@echo "  test       - Run tests"
 	@echo "  tidy       - Tidy Go module dependencies"
+
 	@echo "  help       - Display this help message"
