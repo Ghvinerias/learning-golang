@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -47,8 +49,27 @@ type DefaultSection struct {
 	ArtifactDir string `yaml:"artifactDir"`
 }
 
+// validatePath ensures the path is safe and doesn't contain path traversal attempts
+func validatePath(path string) error {
+	// Clean the path to resolve any .. or . components
+	cleanPath := filepath.Clean(path)
+	
+	// Check for path traversal attempts
+	if strings.Contains(cleanPath, "..") || strings.HasPrefix(cleanPath, "/") {
+		return fmt.Errorf("invalid path: path traversal detected in %s", path)
+	}
+	
+	return nil
+}
+
 // Load reads a YAML config file.
 func Load(path string) (*Root, error) {
+	// Validate the config file path
+	if err := validatePath(path); err != nil {
+		return nil, fmt.Errorf("invalid config path: %w", err)
+	}
+	
+	// #nosec G304 - Path is validated above to prevent traversal attacks
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

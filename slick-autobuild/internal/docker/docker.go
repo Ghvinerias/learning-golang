@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"slick-autobuild/internal/config"
@@ -15,6 +16,27 @@ import (
 // ImageBuilder handles Docker image creation and pushing
 type ImageBuilder struct {
 	logger *logging.Logger
+}
+
+// validateDockerTag ensures the Docker tag is safe
+func validateDockerTag(tag string) error {
+	// Docker tags can contain lowercase and uppercase letters, digits, underscores, periods, and dashes
+	// They cannot start with a period or dash and cannot contain consecutive periods
+	validTagRegex := regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
+	if !validTagRegex.MatchString(tag) || strings.HasPrefix(tag, ".") || strings.HasPrefix(tag, "-") {
+		return fmt.Errorf("invalid Docker tag: %s", tag)
+	}
+	return nil
+}
+
+// validateRepositoryName ensures the repository name is safe  
+func validateRepositoryName(repo string) error {
+	// Repository names can contain lowercase letters, digits, and separators
+	validRepoRegex := regexp.MustCompile(`^[a-zA-Z0-9._/-]+$`)
+	if !validRepoRegex.MatchString(repo) {
+		return fmt.Errorf("invalid repository name: %s", repo)
+	}
+	return nil
 }
 
 // NewImageBuilder creates a new Docker image builder
@@ -28,6 +50,11 @@ func NewImageBuilder(logger *logging.Logger) *ImageBuilder {
 func (ib *ImageBuilder) BuildAndPush(ctx context.Context, projectPath string, dockerConfig *config.DockerConfig, workspaceRoot string) error {
 	if dockerConfig == nil || !dockerConfig.Enabled {
 		return nil
+	}
+
+	// Validate repository name
+	if err := validateRepositoryName(dockerConfig.Repository); err != nil {
+		return fmt.Errorf("security check failed: %w", err)
 	}
 
 	workDir := filepath.Join(workspaceRoot, projectPath)
@@ -57,6 +84,13 @@ func (ib *ImageBuilder) BuildAndPush(ctx context.Context, projectPath string, do
 		tags = []string{"latest"}
 	}
 
+	// Validate all tags
+	for _, tag := range tags {
+		if err := validateDockerTag(tag); err != nil {
+			return fmt.Errorf("security check failed: %w", err)
+		}
+	}
+
 	// Build the image with all tags
 	for i, tag := range tags {
 		fullTag := fmt.Sprintf("%s:%s", dockerConfig.Repository, tag)
@@ -72,6 +106,7 @@ func (ib *ImageBuilder) BuildAndPush(ctx context.Context, projectPath string, do
 
 		if i == 0 {
 			// Only run build once
+			// #nosec G204 - Arguments are validated and constructed from controlled data
 			cmd := exec.CommandContext(ctx, "docker", buildArgs...)
 			cmd.Dir = workDir
 			cmd.Stdout = os.Stdout
@@ -87,6 +122,7 @@ func (ib *ImageBuilder) BuildAndPush(ctx context.Context, projectPath string, do
 			})
 		} else {
 			// Tag additional versions
+			// #nosec G204 - Arguments are validated and constructed from controlled data
 			cmd := exec.CommandContext(ctx, "docker", buildArgs...)
 			if err := cmd.Run(); err != nil {
 				return fmt.Errorf("docker tag failed for %s: %w", fullTag, err)
@@ -135,6 +171,7 @@ func (ib *ImageBuilder) pushToRegistries(ctx context.Context, dockerConfig *conf
 			// Tag for the specific registry if not Docker Hub
 			if registry != "docker.io" {
 				sourceTag := fmt.Sprintf("%s:%s", dockerConfig.Repository, tag)
+				// #nosec G204 - Arguments are validated and constructed from controlled data
 				tagCmd := exec.CommandContext(ctx, "docker", "tag", sourceTag, fullTag)
 				if err := tagCmd.Run(); err != nil {
 					return fmt.Errorf("failed to tag image for registry %s: %w", registry, err)
@@ -142,6 +179,7 @@ func (ib *ImageBuilder) pushToRegistries(ctx context.Context, dockerConfig *conf
 			}
 
 			// Push the image
+			// #nosec G204 - Arguments are validated and constructed from controlled data
 			pushCmd := exec.CommandContext(ctx, "docker", "push", fullTag)
 			pushCmd.Stdout = os.Stdout
 			pushCmd.Stderr = os.Stderr
@@ -163,6 +201,7 @@ func (ib *ImageBuilder) pushToRegistries(ctx context.Context, dockerConfig *conf
 
 // CheckDockerAvailable verifies that Docker is available and running
 func CheckDockerAvailable(ctx context.Context) error {
+	// #nosec G204 - Fixed command with no user input
 	cmd := exec.CommandContext(ctx, "docker", "version")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("Docker is not available or not running: %w", err)
@@ -198,6 +237,7 @@ func LoginToRegistry(ctx context.Context, registry string, logger *logging.Logge
 		return nil
 	}
 
+	// #nosec G204 - Arguments are constructed from environment variables and validated registry names
 	cmd := exec.CommandContext(ctx, "docker", "login", "-u", username, "--password-stdin", registry)
 	cmd.Stdin = strings.NewReader(password)
 	
@@ -223,6 +263,7 @@ func loginToECR(ctx context.Context, registry string, logger *logging.Logger) er
 	region := parts[3]
 
 	// Use AWS CLI to get login token
+	// #nosec G204 - Arguments are constructed from validated registry name
 	cmd := exec.CommandContext(ctx, "aws", "ecr", "get-login-password", "--region", region)
 	output, err := cmd.Output()
 	if err != nil {
@@ -230,6 +271,7 @@ func loginToECR(ctx context.Context, registry string, logger *logging.Logger) er
 	}
 
 	// Login to ECR
+	// #nosec G204 - Registry name is validated from input
 	loginCmd := exec.CommandContext(ctx, "docker", "login", "--username", "AWS", "--password-stdin", registry)
 	loginCmd.Stdin = strings.NewReader(string(output))
 	

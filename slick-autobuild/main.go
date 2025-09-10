@@ -21,6 +21,19 @@ import (
 	"slick-autobuild/internal/runner"
 )
 
+// validatePath ensures the path is safe and doesn't contain path traversal attempts
+func validatePath(path string) error {
+	// Clean the path to resolve any .. or . components
+	cleanPath := filepath.Clean(path)
+	
+	// Check for path traversal attempts that try to escape the working directory
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("invalid path: path traversal detected in %s", path)
+	}
+	
+	return nil
+}
+
 var (
 	flagConfig      = flag.String("config", "build.yaml", "Path to config file")
 	flagConcurrency = flag.Int("concurrency", 0, "Max concurrent builds (default: CPU cores)")
@@ -305,6 +318,12 @@ func runInspect(key string) error {
 		}
 	}
 	
+	// Validate the manifest path
+	if err := validatePath(manifestPath); err != nil {
+		return fmt.Errorf("invalid manifest path: %w", err)
+	}
+	
+	// #nosec G304 - Path is validated above to prevent traversal attacks
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return fmt.Errorf("failed to read manifest: %w", err)

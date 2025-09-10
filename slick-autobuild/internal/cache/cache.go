@@ -8,7 +8,21 @@ import (
 	"path/filepath"
 	"slick-autobuild/internal/planner"
 	"sort"
+	"strings"
 )
+
+// validatePath ensures the path is safe and doesn't contain path traversal attempts
+func validatePath(path string) error {
+	// Clean the path to resolve any .. or . components
+	cleanPath := filepath.Clean(path)
+	
+	// Check for path traversal attempts
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("invalid path: path traversal detected in %s", path)
+	}
+	
+	return nil
+}
 
 // Key generates a cache key based on the task and environment
 func Key(task planner.Task, workspaceRoot string) (string, error) {
@@ -28,6 +42,11 @@ func Key(task planner.Task, workspaceRoot string) (string, error) {
 	// Sort for consistent ordering
 	sort.Strings(lockFiles)
 	for _, lockFile := range lockFiles {
+		// Validate each lock file path
+		if err := validatePath(lockFile); err != nil {
+			continue // Skip invalid paths
+		}
+		// #nosec G304 - Path is validated above to prevent traversal attacks
 		if content, err := os.ReadFile(lockFile); err == nil {
 			h.Write(content)
 		}
@@ -78,7 +97,7 @@ func Exists(key string) bool {
 func Store(key, sourceDir string) error {
 	cacheDir := filepath.Join(".buildcache", key)
 	
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+	if err := os.MkdirAll(cacheDir, 0o750); err != nil {
 		return fmt.Errorf("create cache dir: %w", err)
 	}
 	
@@ -93,7 +112,7 @@ func Restore(key, destDir string) error {
 		return fmt.Errorf("cache key not found: %s", key)
 	}
 	
-	if err := os.MkdirAll(destDir, 0o755); err != nil {
+	if err := os.MkdirAll(destDir, 0o750); err != nil {
 		return fmt.Errorf("create dest dir: %w", err)
 	}
 	
@@ -124,16 +143,26 @@ func copyDir(src, dest string) error {
 
 // copyFile copies a single file
 func copyFile(src, dest string) error {
+	// Validate source and destination paths
+	if err := validatePath(src); err != nil {
+		return fmt.Errorf("invalid source path: %w", err)
+	}
+	if err := validatePath(dest); err != nil {
+		return fmt.Errorf("invalid destination path: %w", err)
+	}
+	
+	// #nosec G304 - Paths are validated above to prevent traversal attacks
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer srcFile.Close()
 	
-	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dest), 0o750); err != nil {
 		return err
 	}
 	
+	// #nosec G304 - Path is validated above to prevent traversal attacks
 	destFile, err := os.Create(dest)
 	if err != nil {
 		return err
