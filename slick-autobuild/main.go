@@ -2,15 +2,22 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
+	"slick-autobuild/internal/artifact"
+	"slick-autobuild/internal/cache"
 	"slick-autobuild/internal/config"
+	"slick-autobuild/internal/logging"
 	"slick-autobuild/internal/planner"
+	"slick-autobuild/internal/runner"
 )
 
 var (
@@ -21,6 +28,14 @@ var (
 	flagOnly        = flag.String("only", "", "Comma separated project paths to include")
 	flagDryRun      = flag.Bool("dry-run", false, "Plan only; do not execute builds")
 	flagVersion     = flag.Bool("version", false, "Print version and exit")
+)
+
+// Error exit codes as defined in MVP
+const (
+	ExitSuccess       = 0
+	ExitBuildFailure  = 1 
+	ExitConfigError   = 2
+	ExitInternalError = 3
 )
 
 const version = "0.0.1-dev"
@@ -49,6 +64,19 @@ func main() {
 		if err := runBuild(); err != nil {
 			fatal(err)
 		}
+	case "clean":
+		if err := runClean(); err != nil {
+			fatal(err)
+		}
+	case "version":
+		fmt.Println(version)
+	case "inspect":
+		if len(args) < 2 {
+			fatal(fmt.Errorf("inspect command requires a key argument"))
+		}
+		if err := runInspect(args[1]); err != nil {
+			fatal(err)
+		}
 	default:
 		fatal(fmt.Errorf("unknown command: %s", cmd))
 	}
@@ -60,8 +88,10 @@ func runPlan() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
+	logger := logging.New(*flagJSON)
 	selected := parseOnly()
 	plan := planner.Expand(cfg, selected)
+	logger.Info("plan generated", map[string]interface{}{"tasks": len(plan.Tasks)})
 	printPlan(plan)
 	return nil
 }
@@ -74,33 +104,173 @@ func runBuild() error {
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
+	logger := logging.New(*flagJSON)
 	selected := parseOnly()
 	plan := planner.Expand(cfg, selected)
 	conc := *flagConcurrency
 	if conc <= 0 {
 		conc = runtime.NumCPU()
 	}
-	fmt.Printf("Executing %d build task(s) with concurrency=%d\n", len(plan.Tasks), conc)
-	// Placeholder: simulate builds
+	logger.Info("starting builds", map[string]interface{}{"tasks": len(plan.Tasks), "concurrency": conc})
+
+	workspaceRoot, _ := os.Getwd()
+
 	ctx := context.Background()
 	sem := make(chan struct{}, conc)
+	errCh := make(chan error, len(plan.Tasks))
 	for _, t := range plan.Tasks {
 		sem <- struct{}{}
 		go func(task planner.Task) {
 			defer func() { <-sem }()
 			start := time.Now()
-			fmt.Printf("[BUILD] %s (%s %s)\n", task.Path, task.Kind, task.Version)
-			// Simulate build runtime
-			time.Sleep(200 * time.Millisecond)
-			fmt.Printf("[OK] %s in %v\n", task.Path, time.Since(start))
+			
+			// Generate cache key
+			cacheKey, err := cache.Key(task, workspaceRoot)
+			if err != nil {
+				logger.Error("cache key generation failed", map[string]interface{}{"path": task.Path, "error": err})
+				errCh <- err
+				return
+			}
+			
+			outDir := filepath.Join("out", task.Path, task.Version)
+			
+			// Check cache if not disabled
+			var reused bool
+			if !*flagNoCache && cache.Exists(cacheKey) {
+				logger.Info("cache hit", map[string]interface{}{"path": task.Path, "key": cacheKey})
+				if err := cache.Restore(cacheKey, outDir); err != nil {
+					logger.Error("cache restore failed", map[string]interface{}{"path": task.Path, "error": err})
+					errCh <- err
+					return
+				}
+				reused = true
+			} else {
+				logger.Info("build start", map[string]interface{}{"path": task.Path, "kind": task.Kind, "version": task.Version, "key": cacheKey})
+
+				// Find matrix entry for extra fields (package manager, build scripts)
+				var pkgMgr string
+				var scripts []string
+				for _, me := range cfg.Matrix {
+					if me.Path == task.Path && me.Type == task.Kind {
+						pkgMgr = me.PackageManager
+						scripts = me.BuildScripts
+						break
+					}
+				}
+
+				runErr := runner.RunTask(ctx, task, runner.Options{Logger: logger, WorkspaceRoot: workspaceRoot}, pkgMgr, scripts)
+				if runErr != nil {
+					logger.Error("build failed", map[string]interface{}{"path": task.Path, "error": runErr})
+					errCh <- runErr
+					return
+				}
+				
+				// Store in cache if not disabled
+				if !*flagNoCache {
+					if err := cache.Store(cacheKey, outDir); err != nil {
+						logger.Error("cache store failed", map[string]interface{}{"path": task.Path, "error": err})
+						// Don't fail the build for cache store failures
+					}
+				}
+			}
+
+			elapsed := time.Since(start)
+			_ = artifact.WriteManifest(outDir, artifact.Manifest{
+				Project: task.Path,
+				Kind: task.Kind,
+				Toolchain: task.Kind,
+				Version: task.Version,
+				Hash: cacheKey,
+				BuildTimeMs: elapsed.Milliseconds(),
+				Reused: reused,
+			})
+			
+			if reused {
+				logger.Info("build reused", map[string]interface{}{"path": task.Path, "elapsed_ms": elapsed.Milliseconds()})
+			} else {
+				logger.Info("build complete", map[string]interface{}{"path": task.Path, "elapsed_ms": elapsed.Milliseconds()})
+			}
 		}(t)
 	}
-	// drain
-	for i := 0; i < cap(sem); i++ {
-		sem <- struct{}{}
+	for i := 0; i < cap(sem); i++ { sem <- struct{}{} }
+	close(errCh)
+	for e := range errCh { if e != nil { return errors.New("one or more builds failed") } }
+	logger.Info("all tasks completed", nil)
+	return nil
+}
+
+func runClean() error {
+	logger := logging.New(*flagJSON)
+	
+	// Remove cache directory
+	cacheDir := ".buildcache"
+	if err := os.RemoveAll(cacheDir); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove cache directory: %w", err)
 	}
-	fmt.Println("All tasks completed (simulated).")
-	_ = ctx
+	
+	// Remove output directory
+	outDir := "out"
+	if err := os.RemoveAll(outDir); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove output directory: %w", err)
+	}
+	
+	logger.Info("clean completed", map[string]interface{}{
+		"cache_dir": cacheDir,
+		"out_dir": outDir,
+	})
+	return nil
+}
+
+func runInspect(key string) error {
+	logger := logging.New(*flagJSON)
+	
+	// Try to find manifest in cache first, then in output directory
+	manifestPath := filepath.Join(".buildcache", key, "manifest.json")
+	if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
+		// Try alternative locations
+		possiblePaths := []string{
+			filepath.Join("out", key, "manifest.json"),
+		}
+		
+		found := false
+		for _, path := range possiblePaths {
+			if _, err := os.Stat(path); err == nil {
+				manifestPath = path
+				found = true
+				break
+			}
+		}
+		
+		if !found {
+			return fmt.Errorf("manifest not found for key: %s", key)
+		}
+	}
+	
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return fmt.Errorf("failed to read manifest: %w", err)
+	}
+	
+	if *flagJSON {
+		fmt.Print(string(data))
+	} else {
+		var manifest artifact.Manifest
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			return fmt.Errorf("failed to parse manifest: %w", err)
+		}
+		
+		fmt.Printf("Manifest for key: %s\n", key)
+		fmt.Printf("  Project: %s\n", manifest.Project)
+		fmt.Printf("  Kind: %s\n", manifest.Kind)
+		fmt.Printf("  Toolchain: %s\n", manifest.Toolchain)
+		fmt.Printf("  Version: %s\n", manifest.Version)
+		fmt.Printf("  Hash: %s\n", manifest.Hash)
+		fmt.Printf("  Build Time: %d ms\n", manifest.BuildTimeMs)
+		fmt.Printf("  Reused: %t\n", manifest.Reused)
+		fmt.Printf("  Created At: %s\n", manifest.CreatedAt)
+	}
+	
+	logger.Info("inspect completed", map[string]interface{}{"key": key, "path": manifestPath})
 	return nil
 }
 
@@ -127,5 +297,19 @@ func printPlan(p planner.Plan) {
 
 func fatal(err error) {
 	fmt.Fprintln(os.Stderr, "Error:", err)
-	os.Exit(1)
+	
+	// Determine appropriate exit code based on error type
+	exitCode := ExitInternalError // default
+	errStr := err.Error()
+	
+	if strings.Contains(errStr, "load config") || 
+	   strings.Contains(errStr, "parse yaml") ||
+	   strings.Contains(errStr, "config error") {
+		exitCode = ExitConfigError
+	} else if strings.Contains(errStr, "build failed") ||
+	         strings.Contains(errStr, "one or more builds failed") {
+		exitCode = ExitBuildFailure
+	}
+	
+	os.Exit(exitCode)
 }

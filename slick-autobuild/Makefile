@@ -1,10 +1,10 @@
 # Golang Project Makefile
 # -----------------
-# Project: template
-# Date: June 30, 2025
+# Project: slick-autobuild  
+# Date: January 2025
 
 # Binary name
-BINARY_NAME := template
+BINARY_NAME := slick-autobuild
 WINDOWS_BINARY := $(BINARY_NAME).exe
 LINUX_BINARY := $(BINARY_NAME)
 
