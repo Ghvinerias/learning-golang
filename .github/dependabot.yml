@@ -1,8 +1,15 @@
 version: 2
 updates:
-  # Main project
+  # Minimal/example modules
   - package-ecosystem: "gomod"
-    directory: "/"
+    directories:
+      - "/1"
+      - "/JsonValidator"
+      - "/SlickTools"
+      - "/templ-engine"
+      - "/url-extractor"
+      - "/website-checke-v2"
+      - "/website-checker"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 5
@@ -10,6 +17,32 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "deps"
+      include: "scope"
+
+  # ad-password-reset-telegram
+  - package-ecosystem: "gomod"
+    directory: "/ad-password-reset-telegram"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ad-password-reset-telegram"
+    commit-message:
+      prefix: "deps(ad-password-reset)"
+      include: "scope"
+
+  # slick-autobuild
+  - package-ecosystem: "gomod"
+    directory: "/slick-autobuild"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "slick-autobuild"
+    commit-message:
+      prefix: "deps(autobuild)"
       include: "scope"
 
   # telegram-torrent-bot
@@ -142,6 +175,20 @@ updates:
     commit-message:
       prefix: "docker(telegram)"
       include: "scope"
+
+  # Docker support for ad-password-reset-telegram
+  - package-ecosystem: "docker"
+    directory: "/ad-password-reset-telegram"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "docker"
+      - "dependencies"
+      - "ad-password-reset-telegram"
+    commit-message:
+      prefix: "docker(ad-password-reset)"
+      include: "scope"
       
   # Docker support for mkvmerge-consumer
   - package-ecosystem: "docker"
@@ -183,3 +230,28 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
+
+  # Example application manifests
+  - package-ecosystem: "npm"
+    directory: "/slick-autobuild/examples/sample-node"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "nuget"
+    directory: "/slick-autobuild/examples/sample-dotnet"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/slick-autobuild/examples/frontend"
+      - "/slick-autobuild/examples/services/api"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "docker"
+      - "dependencies"

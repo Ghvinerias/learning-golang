@@ -13,7 +13,7 @@ import (
 	"mkvmerge-notifier/config"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // Global configuration

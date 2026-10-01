@@ -1,35 +1,35 @@
 package main
 
 import (
-    "fmt"
-    "log"
-    "github.com/bitwarden/sdk-go/bitwarden" // Assuming SDK is available
+	"fmt"
+	"log"
+	"os"
+
+	sdk "github.com/bitwarden/sdk-go"
 )
 
 func main() {
-    // Initialize the Bitwarden client
-    client, err := bitwarden.NewClient("personal", "xxxxx")
-    if err != nil {
-        log.Fatalf("Failed to create Bitwarden client: %v", err)
-    }
+	accessToken := os.Getenv("BWS_ACCESS_TOKEN")
+	secretID := os.Getenv("BWS_SECRET_ID")
+	if accessToken == "" || secretID == "" {
+		log.Fatal("BWS_ACCESS_TOKEN and BWS_SECRET_ID must be set")
+	}
 
-    // // Authenticate with Bitwarden
-    // err = client.Authenticate("YOUR_USERNAME", "YOUR_PASSWORD")
-    // if err != nil {
-    //     log.Fatalf("Authentication failed: %v", err)
-    // }
+	client, err := sdk.NewBitwardenClient(nil, nil)
+	if err != nil {
+		log.Fatalf("create Bitwarden client: %v", err)
+	}
+	defer client.Close()
 
-    // Retrieve the secret
-    secretID := "your-secret-id" // The ID of the secret that stores your API key
-    secret, err := client.GetSecret(secretID)
-    if err != nil {
-        log.Fatalf("Failed to retrieve secret: %v", err)
-    }
+	if err := client.AccessTokenLogin(accessToken, nil); err != nil {
+		log.Fatalf("authenticate with Bitwarden: %v", err)
+	}
 
-    // Use the secret (e.g., API key)
-    apiKey := secret.Data // Assuming Data contains the API key
-    fmt.Println("API Key successfully retrieved.")
+	secret, err := client.Secrets().Get(secretID)
+	if err != nil {
+		log.Fatalf("retrieve secret: %v", err)
+	}
 
-    // Use the API key to make a request to the OpenWeather API
-    // e.g., makeRequestToOpenWeather(apiKey)
+	// Deliberately avoid printing the secret value.
+	fmt.Printf("Secret %q retrieved successfully.\n", secret.Key)
 }

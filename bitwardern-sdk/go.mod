@@ -1,5 +1,5 @@
 module bitwardern-sdk
 
-go 1.20
+go 1.21
 
-require github.com/bitwarden/sdk-go v0.1.1 // indirect
+require github.com/bitwarden/sdk-go v1.0.2

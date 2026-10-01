@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"github.com/bndr/gojenkins"
+	"log"
 )
 
 type JenkinsConfig struct {
@@ -48,6 +48,6 @@ func main() {
 	}
 
 	// Access Jenkins version
-	fmt.Printf("Jenkins version at %s: %s\n", jenkinsTestConfig.URL, info)
-	fmt.Printf("Jenkins version at %s: %s\n", jenkinsProdConfig.URL, info)
+	fmt.Printf("Jenkins version at %s: %v\n", jenkinsTestConfig.URL, info)
+	fmt.Printf("Jenkins version at %s: %v\n", jenkinsProdConfig.URL, info)
 }

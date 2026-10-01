@@ -9,14 +9,12 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"log"
-
-	"slick-auth/config"
 )
 
 func main() {
 	// Create a new config instance with prefix "ZABBIX"
-	cfg, err := config.New(
-		config.WithEnvPrefix("ZABBIX"),
+	cfg, err := New(
+		WithEnvPrefix("ZABBIX"),
 		// Optionally, you could also specify a config file:
 		// config.WithConfigFile("config.yaml"),
 	)
