@@ -1,5 +1,5 @@
 # Example Node.js Frontend Dockerfile
-FROM node:20-alpine AS base
+FROM node:26-alpine AS base
 WORKDIR /app
 RUN corepack enable
 
