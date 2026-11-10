@@ -51,7 +51,8 @@ jobs:
 
   notify:
     needs: [test]
-    if: ${{ always() }}
+    # Dependabot runs have no access to repository secrets
+    if: ${{ always() && github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Send Telegram notification
